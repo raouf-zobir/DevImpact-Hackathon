@@ -11,7 +11,6 @@ class UnpaidStudent extends StatelessWidget {
   const UnpaidStudent({super.key});
   @override
   Widget build(BuildContext context) {
-
     return Container(
         padding: EdgeInsets.all(32 * getScaleFactor(context)),
         decoration: BoxDecoration(
@@ -37,7 +36,7 @@ class UnpaidStudent extends StatelessWidget {
                   child: Text("No unpaid students"),
                 );
               }
-              
+
               return Column(
                 children: [
                   ...List.generate(
@@ -47,7 +46,7 @@ class UnpaidStudent extends StatelessWidget {
                       if (index >= controller.remainingBalance.length) {
                         return const SizedBox.shrink();
                       }
-                      
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 24),
                         child: RowUnpaidStudent(
@@ -61,7 +60,7 @@ class UnpaidStudent extends StatelessWidget {
               );
             }),
             const SizedBox(height: 8),
-            const MyPaginations(),
+            MyPaginations(),
           ],
         ));
   }

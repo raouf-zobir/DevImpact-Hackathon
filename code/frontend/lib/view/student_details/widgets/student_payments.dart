@@ -34,7 +34,7 @@ class StudentPayments extends StatelessWidget {
                         studentPaymentModel: studentsPaymentModel[index],
                       )),
               const SizedBox(height: 25),
-              const MyPaginations()
+              MyPaginations()
             ],
           )
         ],

@@ -6,7 +6,6 @@ import 'package:sama/core/constants/app_colors.dart';
 import 'package:sama/core/constants/app_font_style.dart';
 import 'package:sama/core/constants/assets.dart';
 
-//TODO required
 class MyPaginations extends StatelessWidget {
   const MyPaginations({
     super.key,
@@ -16,30 +15,35 @@ class MyPaginations extends StatelessWidget {
     this.index = 1,
     this.length = 3,
     this.maxIndex = 10,
+    this.totalItems = 100,
+    this.itemsPerPage = 5,
   });
+
   final bool showLength;
   final int index;
   final int maxIndex;
   final int length;
+  final int totalItems;
+  final int itemsPerPage;
   final void Function()? next;
-
   final void Function()? previous;
 
   @override
   Widget build(BuildContext context) {
-    List<String> numActive = [];
-    numActive = List.generate(maxIndex + 3, (index) => (index + 1).toString());
+    List<String> numActive =
+        List.generate(maxIndex + 1, (index) => (index + 1).toString());
 
-    if (maxIndex == 1) {
-      int start = min(index, maxIndex - 1);
-      numActive = numActive.sublist(start, maxIndex + 1);
-    } else {
-      int start = max(0, min(index, maxIndex - 2));
-      int end = min(maxIndex + 1, start + 3);
-      numActive = numActive.sublist(start, end);
+    int start = max(0, min(index - 1, maxIndex - length + 1));
+    int end = min(maxIndex + 1, start + length);
+    if (start >= end) {
+      start = max(0, end - length);
     }
+    numActive = numActive.sublist(start, end);
+
     return Row(
-      mainAxisAlignment: showLength ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+      mainAxisAlignment: showLength
+          ? MainAxisAlignment.spaceBetween
+          : MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (showLength)
@@ -52,21 +56,31 @@ class MyPaginations extends StatelessWidget {
                   children: [
                     TextSpan(
                         text: 'Showing ',
-                        style: AppFontStyle.styleRegular16(context).copyWith(color: AppColors.darkGray)),
-                    TextSpan(text: '1-5 ', style: AppFontStyle.styleRegular16(context)),
+                        style: AppFontStyle.styleRegular16(context)
+                            .copyWith(color: AppColors.darkGray)),
+                    TextSpan(
+                        text:
+                            '${(index - 1) * itemsPerPage + 1}-${min(index * itemsPerPage, totalItems)} ',
+                        style: AppFontStyle.styleRegular16(context)),
                     TextSpan(
                         text: 'from ',
-                        style: AppFontStyle.styleRegular16(context).copyWith(color: AppColors.darkGray)),
-                    TextSpan(text: '100 ', style: AppFontStyle.styleRegular16(context)),
+                        style: AppFontStyle.styleRegular16(context)
+                            .copyWith(color: AppColors.darkGray)),
+                    TextSpan(
+                        text: '$totalItems ',
+                        style: AppFontStyle.styleRegular16(context)),
                     TextSpan(
                         text: 'data',
-                        style: AppFontStyle.styleRegular16(context).copyWith(color: AppColors.darkGray)),
+                        style: AppFontStyle.styleRegular16(context)
+                            .copyWith(color: AppColors.darkGray)),
                   ],
                 ),
               ),
             ),
           ),
-        if (showLength) Flexible(child: SizedBox(width: 120 * getScaleFactor(context))),
+        if (showLength)
+          Flexible(
+              child: SizedBox(width: 120 * getPaginationScaleFactor(context))),
         Flexible(
           flex: 5,
           child: FittedBox(
@@ -74,28 +88,33 @@ class MyPaginations extends StatelessWidget {
             child: Row(
               children: [
                 Dropdown(
-                  isActive: index == 0,
+                  isActive: index == 1,
                   index: index,
                   maxIndex: maxIndex,
-                  angle: 22 / 7 / 2,
-                  onTap: next ?? () => {},
+                  angle: pi / 2,
+                  onTap: previous,
                 ),
-                ...List.generate(numActive.length, (index) {
-                  bool isActive = (this.index + 1).toString() == numActive[index];
+                ...List.generate(numActive.length, (i) {
+                  bool isActive = (index).toString() == numActive[i];
 
                   return Padding(
-                    padding: EdgeInsets.only(right: index < numActive.length ? 6 : 0),
+                    padding: EdgeInsets.only(
+                        right: i < numActive.length - 1 ? 6 : 0),
                     child: CircleAvatar(
-                      radius: 24 * getScaleFactor(context),
-                      backgroundColor: !isActive ? AppColors.darkGray : AppColors.primaryPurple,
+                      radius: 24 * getPaginationScaleFactor(context),
+                      backgroundColor: !isActive
+                          ? AppColors.darkGray
+                          : AppColors.primaryPurple,
                       child: CircleAvatar(
-                        radius: 24 * getScaleFactor(context) - 1.7,
-                        backgroundColor: isActive ? AppColors.primaryPurple : Colors.white,
+                        radius: 24 * getPaginationScaleFactor(context) - 1.7,
+                        backgroundColor:
+                            isActive ? AppColors.primaryPurple : Colors.white,
                         child: Center(
                           child: Text(
-                            numActive[index],
+                            numActive[i],
                             style: AppFontStyle.styleMedium18(context).copyWith(
-                              color: !isActive ? AppColors.darkGray : Colors.white,
+                              color:
+                                  !isActive ? AppColors.darkGray : Colors.white,
                             ),
                           ),
                         ),
@@ -105,8 +124,8 @@ class MyPaginations extends StatelessWidget {
                 }),
                 Dropdown(
                   isActive: index == maxIndex,
-                  angle: 22 / 7 / -2,
-                  onTap: previous ?? () => {},
+                  angle: -pi / 2,
+                  onTap: next,
                   index: index,
                   maxIndex: maxIndex,
                 ),
@@ -128,11 +147,13 @@ class Dropdown extends StatelessWidget {
     required this.maxIndex,
     required this.isActive,
   });
+
   final double angle;
   final int index;
   final int maxIndex;
   final bool isActive;
   final void Function()? onTap;
+
   @override
   Widget build(BuildContext context) {
     return Transform.rotate(
@@ -141,11 +162,16 @@ class Dropdown extends StatelessWidget {
         onTap: onTap,
         child: SvgPicture.asset(
           Assets.iconsDropdown,
-          height: 32 * getScaleFactor(context),
-          colorFilter:
-              ColorFilter.mode(isActive ? AppColors.darkGray : AppColors.primaryPurple, BlendMode.srcIn),
+          height: 32 * getPaginationScaleFactor(context),
+          colorFilter: ColorFilter.mode(
+              isActive ? AppColors.darkGray : AppColors.primaryPurple,
+              BlendMode.srcIn),
         ),
       ),
     );
   }
+}
+
+double getPaginationScaleFactor(BuildContext context) {
+  return MediaQuery.of(context).textScaleFactor;
 }
