@@ -41,11 +41,38 @@ class ClassesControllerImp extends ClassesController {
   }
 
   addSection() async {
-    int length = activeSections.length;
-    if (length >= 10) return;
+    String? sectionName = await showDialog<String>(
+      context: Get.context!,
+      builder: (BuildContext context) {
+        TextEditingController controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('Add Section'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: 'Enter section name'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(controller.text);
+              },
+              child: const Text('Save'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(null);
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (sectionName == null || sectionName.isEmpty) return;
 
     SectionModel sectionModel = SectionModel(
-      name: ordinalNames[length],
+      name: sectionName,
       level: classesModel[isActive].educationLevel,
       grade: classesModel[isActive].grade,
       numberStudent: 0,
@@ -59,7 +86,39 @@ class ClassesControllerImp extends ClassesController {
   }
 
   deleteSection() async {
-    bool? confirmDelete = await showDialog(
+    if (activeSections.isEmpty) return;
+
+    SectionModel? sectionToDelete = await showDialog<SectionModel>(
+      context: Get.context!,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Section'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: activeSections.map((section) {
+              return ListTile(
+                title: Text(section.name),
+                onTap: () {
+                  Navigator.of(context).pop(section);
+                },
+              );
+            }).toList(),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(null);
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (sectionToDelete == null) return;
+
+    bool? confirmDelete = await showDialog<bool>(
       context: Get.context!,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -84,50 +143,33 @@ class ClassesControllerImp extends ClassesController {
       },
     );
 
-    if (activeSections.isEmpty || confirmDelete == null || !confirmDelete)
-      return;
+    if (confirmDelete == null || !confirmDelete) return;
 
-    List<SectionModel> sectionsToDelete = allSections
-        .whereType<SectionModel>()
-        .where((element) => element.grade == "Grade ${isActive + 1}")
-        .toList();
+    final items = box.values.toList();
+    int index = items.indexWhere(
+        (item) => item is SectionModel && item.name == sectionToDelete.name);
 
-    if (sectionsToDelete.isNotEmpty) {
-      SectionModel sectionToDelete = sectionsToDelete.last;
+    List<int> listRemoveIndexSections = [];
 
-      final items = box.values.toList();
-      int index = 0;
-
-      List<int> listRemoveIndexSections = [];
-
-      for (var i = 0; i < items.length; i++) {
-        if (items[i] is SectionModel &&
-            items[i].grade == sectionToDelete.grade) {
-          index = i;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] is StudentModel) {
+        StudentModel student = items[i] as StudentModel;
+        if (student.grade == levels[isActive] &&
+            student.section == sectionToDelete.name) {
+          listRemoveIndexSections.add(i);
         }
       }
-
-      for (var i = 0; i < items.length; i++) {
-        if (items[i] is StudentModel) {
-          StudentModel student = items[i] as StudentModel;
-          if (student.grade == levels[isActive]) {
-            if (student.section == (items[index] as SectionModel).name) {
-              listRemoveIndexSections.add(i);
-            }
-          }
-        }
-      }
-      listRemoveIndexSections.sort((a, b) => b.compareTo(a));
-      for (var i = 0; i < listRemoveIndexSections.length; i++) {
-        box.deleteAt(listRemoveIndexSections[i]);
-      }
-      box.deleteAt(index);
-      allSections.remove(sectionToDelete);
-      activeSections.remove(sectionToDelete);
-      changeIndexPagination(paginationIndex);
-
-      update();
     }
+    listRemoveIndexSections.sort((a, b) => b.compareTo(a));
+    for (var i = 0; i < listRemoveIndexSections.length; i++) {
+      box.deleteAt(listRemoveIndexSections[i]);
+    }
+    box.deleteAt(index);
+    allSections.remove(sectionToDelete);
+    activeSections.remove(sectionToDelete);
+    changeIndexPagination(paginationIndex);
+
+    update();
   }
 
   getSections(int index) {
