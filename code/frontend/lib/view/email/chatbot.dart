@@ -8,6 +8,8 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+
+
 class EmailService {
   static const String _smtpHost = 'smtp.gmail.com';
   static const int _smtpPort = 587;
@@ -31,88 +33,85 @@ class EmailService {
     final emailIndex = 5;  // "Email" column
     final parentEmailIndex = 10;  // "Parent Email" column
     
-    // Convert recipientType to lowercase for case-insensitive comparison
     final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
+    final List<String> emailList = [];
 
-    return _cachedData!
-        .where((row) {
-          if (row.length <= emailIndex) return false;
-          if (row[0] == "ID") return false;
+    for (var row in _cachedData!) {
+      if (row.length <= emailIndex || row[0] == "ID") continue;
 
-          // Then check the recipient type
-          switch (normalizedRecipientType) {
-            case 'students':
-              return row[emailIndex].toString().isNotEmpty;
-            case 'parents':
-              return row[parentEmailIndex].toString().isNotEmpty;
-            case 'both':
-              return row[emailIndex].toString().isNotEmpty || 
-                     row[parentEmailIndex].toString().isNotEmpty;
-            default:
-              return false;
+      String? studentEmail = row[emailIndex]?.toString().trim();
+      String? parentEmail = row[parentEmailIndex]?.toString().trim();
+
+      switch (normalizedRecipientType) {
+        case 'students':
+          if (studentEmail != null && studentEmail.isNotEmpty) {
+            emailList.add(studentEmail);
           }
-        })
-        .expand((row) {
-          if (normalizedRecipientType == 'both') {
-            final emails = <String>[];
-            if (row[emailIndex].toString().isNotEmpty) {
-              emails.add(row[emailIndex].toString());
-            }
-            if (row[parentEmailIndex].toString().isNotEmpty) {
-              emails.add(row[parentEmailIndex].toString());
-            }
-            return emails;
+          break;
+        case 'parents':
+          if (parentEmail != null && parentEmail.isNotEmpty) {
+            emailList.add(parentEmail);
           }
-          
-          return [normalizedRecipientType == 'parents' 
-              ? row[parentEmailIndex].toString() 
-              : row[emailIndex].toString()];
-        })
-        .where((email) => email.isNotEmpty)
-        .toList();
-  }
-
-  // Helper method to parse recipient string and extract type and level
-  static RecipientInfo parseRecipientString(String recipients) {
-    // Remove any spaces and convert to lowercase for consistent matching
-    final parts = recipients.replaceAll(' ', '').toLowerCase().split('-').map((e) => e.trim()).toList();
-    final type = parts[0];
-    String? level;
-    
-    // We no longer check for level
-    return RecipientInfo(type: type, level: null);
-  }
-
-  Future<void> sendEmail({
-    required String recipientType,
-    String? level,
-    required String subject,
-    required String body,
-  }) async {
-    final smtpServer = SmtpServer(
-      _smtpHost,
-      port: _smtpPort,
-      username: _username,
-      password: _password,
-    );
-
-    final emailAddresses = await getEmailAddresses(recipientType, level: level);
-    if (emailAddresses.isEmpty) {
-      throw Exception('No recipients found for type: $recipientType');
+          break;
+        case 'both':
+          if (studentEmail != null && studentEmail.isNotEmpty) {
+            emailList.add(studentEmail);
+          }
+          if (parentEmail != null && parentEmail.isNotEmpty) {
+            emailList.add(parentEmail);
+          }
+          break;
+      }
     }
 
+    return emailList.toSet().toList();
+  }
+
+ Future<void> sendEmail({
+  required String recipientType,
+  String? level,
+  required String subject,
+  required String body,
+}) async {
+  final smtpServer = SmtpServer(
+    _smtpHost,
+    port: _smtpPort,
+    username: _username,
+    password: _password,
+  );
+
+  final emailAddresses = await getEmailAddresses(recipientType, level: level);
+  if (emailAddresses.isEmpty) {
+    throw Exception('No recipients found for type: $recipientType');
+  }
+
+  // Print the number of recipients for verification
+  print('Preparing to send email to ${emailAddresses.length} recipients');
+
+  // Loop through each email address and send individual emails
+  for (var email in emailAddresses) {
     final message = Message()
       ..from = Address(_username)
-      ..bccRecipients.addAll(emailAddresses.map((email) => Address(email)))
+      ..recipients.add(Address(email))
       ..subject = subject
       ..text = body;
 
     try {
       final sendReport = await send(message, smtpServer);
-      print('Message sent: ${sendReport.toString()}');
+      print('Email sent successfully to $email');
     } catch (e) {
-      throw Exception('Failed to send email: $e');
+      print('Failed to send email to $email: $e');
+      // Handle the exception or continue sending to other recipients
     }
+  }
+
+  print('All emails have been sent.');
+}
+  // Helper method to parse recipient string and extract type and level
+  static RecipientInfo parseRecipientString(String recipients) {
+    final parts = recipients.replaceAll(' ', '').toLowerCase().split('-').map((e) => e.trim()).toList();
+    final type = parts[0];
+    return RecipientInfo(type: type, level: null);
   }
 }
 
