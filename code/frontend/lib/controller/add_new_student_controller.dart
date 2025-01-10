@@ -229,9 +229,14 @@ Future addNewStudent() async {
 
   void setGrade(String value) {
     grade = value;
-    sections = box.values.whereType<SectionModel>().where((e) {
-      return value.contains(e.level) && value.contains(e.grade);
+    // Extract grade number (1, 2, or 3) from the grade string
+    String gradeNumber = value.split(' ')[1];
+    
+    sections = box.values.whereType<SectionModel>().where((section) {
+      // Compare just the grade number part
+      return section.grade == "Grade $gradeNumber";
     }).toList();
+
     if (sections.isNotEmpty) {
       activeSection = sections.last.name;
     } else {
