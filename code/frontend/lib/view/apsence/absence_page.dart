@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:video_player/video_player.dart';
+import 'package:video_player_win/video_player_win.dart';
 
 class AbsencePage extends StatefulWidget {
   const AbsencePage({super.key});
@@ -18,9 +19,47 @@ class _AbsencePageState extends State<AbsencePage> {
   VideoPlayerController? _videoController;
 
   @override
+  void initState() {
+    super.initState();
+    WindowsVideoPlayer.registerWith(); // Add this line
+    _initializeDefaultVideo();
+  }
+
+  @override
   void dispose() {
     _videoController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeDefaultVideo() async {
+    try {
+      if (Platform.isWindows) {
+        final String videoPath = 'C:/Users/ANAS/Desktop/DevImpact-Hackathon/code/frontend/assets/vidio/AI_camera.mp4';
+        _videoController = VideoPlayerController.file(File(videoPath));
+      } else {
+        _videoController = VideoPlayerController.asset('assets/vidio/AI_camera.mp4');
+      }
+      
+      await _videoController!.initialize();
+      _videoController!.setLooping(true);
+      setState(() {});
+    } catch (e) {
+      print('Error loading video: $e');
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Video Error'),
+          content: Text('Failed to load video: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _pickImage() async {
@@ -45,25 +84,13 @@ class _AbsencePageState extends State<AbsencePage> {
   }
 
   Future<void> _pickVideo() async {
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
-        allowMultiple: false,
-      );
-      if (result != null) {
-        setState(() {
-          _selectedVideo = File(result.files.single.path!);
-          _initializeVideoPlayer();
-        });
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      if (_videoController!.value.isPlaying) {
+        await _videoController!.pause();
+      } else {
+        await _videoController!.play();
       }
-    } else {
-      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-      if (video != null) {
-        setState(() {
-          _selectedVideo = File(video.path);
-          _initializeVideoPlayer();
-        });
-      }
+      setState(() {});
     }
   }
 
@@ -84,10 +111,45 @@ class _AbsencePageState extends State<AbsencePage> {
         MaterialPageRoute(
           builder: (context) => Scaffold(
             backgroundColor: Colors.black,
-            body: Center(
-              child: AspectRatio(
-                aspectRatio: _videoController!.value.aspectRatio,
-                child: VideoPlayer(_videoController!),
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            body: SafeArea(
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: _videoController!.value.aspectRatio,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      VideoPlayer(_videoController!),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _videoController!.value.isPlaying
+                                ? _videoController!.pause()
+                                : _videoController!.play();
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            floatingActionButton: FloatingActionButton(
+              onPressed: () {
+                setState(() {
+                  _videoController!.value.isPlaying
+                      ? _videoController!.pause()
+                      : _videoController!.play();
+                });
+              },
+              child: Icon(
+                _videoController!.value.isPlaying ? Icons.pause : Icons.play_arrow,
               ),
             ),
           ),
@@ -246,19 +308,11 @@ class _AbsencePageState extends State<AbsencePage> {
                             ),
                             const SizedBox(height: 20),
                             Text(
-                              'Upload Video',
+                              'Play Video',
                               style: TextStyle(
                                 color: Colors.blue.shade400,
                                 fontSize: 24,
                                 fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Click to select',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 16,
                               ),
                             ),
                           ] else
@@ -280,10 +334,12 @@ class _AbsencePageState extends State<AbsencePage> {
                                         color: Colors.black.withOpacity(0.5),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(
-                                        Icons.fullscreen,
+                                      child: Icon(
+                                        _videoController!.value.isPlaying
+                                            ? Icons.pause
+                                            : Icons.play_arrow,
                                         color: Colors.white,
-                                        size: 30,
+                                        size: 50,
                                       ),
                                     ),
                                   ],
