@@ -10,7 +10,7 @@ import 'package:sama/view/teacher_details/teacher_with_trailing.dart';
 import 'package:sama/view/users_details/users_with_trailing.dart';
 import 'package:sama/view/view_all_student/view_all_student.dart';
 import 'package:sama/view/view_all_teacher/view_all_teacher.dart';
-import 'package:sama/view/email/email_sender.dart';
+import 'package:sama/view/email/chatbot.dart';
 abstract class NavigationController extends GetxController {
   Widget getCurrentPage();
 }
@@ -41,7 +41,7 @@ class NavigationControllerImp extends NavigationController {
       case NavigationEnum.TeacherDetails:
         _currentPage = TeachersWithTrailing(teacherModel: info?["model"]);
       case NavigationEnum.EmailSender:
-        _currentPage = EmailSender();
+        _currentPage = ChatBot();
     }
 
     update();

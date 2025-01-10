@@ -44,6 +44,9 @@ dependencies:
   desktop_drop: ^0.4.4
   path_provider: ^2.1.2
   dropdown_search: ^5.0.6
+  google_generative_ai: ^0.4.6
+  dio: ^5.7.0
+  pretty_dio_logger: ^1.4.0
  
 dev_dependencies:
   flutter_test:
