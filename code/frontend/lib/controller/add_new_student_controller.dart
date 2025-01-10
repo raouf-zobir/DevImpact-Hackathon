@@ -13,6 +13,8 @@ import 'package:sama/core/my_services.dart';
 import 'package:sama/core/utils/validation.dart';
 import 'package:sama/model/section_model.dart';
 import 'package:sama/model/student_model.dart';
+import 'dart:io';
+import 'package:csv/csv.dart';
 
 abstract class AddNewStudentController extends GetxController {
   selectChoicePayment(PaymentEnum paymentEnum);
@@ -60,7 +62,8 @@ class AddNewStudentControllerImp extends AddNewStudentController {
   String? activeSection;
 
   Future<void> saveFileToLocal(XFile file) async {
-    file.saveTo("C:/Users/Raouf/Desktop/test/${file.name}");
+    file.saveTo(
+        "C:/Users/Raouf/Desktop/Project/Students/StudentsPhoto/${file.name}");
   }
 
   void pop() {
@@ -112,6 +115,8 @@ class AddNewStudentControllerImp extends AddNewStudentController {
           section: activeSection!,
           typeapid: statePayment.name,
         );
+
+        // Save to Hive
         if (student != null) {
           final items = box.values.toList();
           for (int i = 0; i < items.length; i++) {
@@ -122,6 +127,76 @@ class AddNewStudentControllerImp extends AddNewStudentController {
         } else {
           await box.add(studentModel);
         }
+
+        // Save to CSV
+        try {
+          // final directory = await getApplicationDocumentsDirectory();
+          const filePath =
+              'C:/Users/Raouf/Desktop/Project/Students/students.csv';
+
+          File file = File(filePath);
+          List<List<String>> csvData;
+
+          if (await file.exists()) {
+            // Read existing CSV data
+            String content = await file.readAsString();
+            csvData = const CsvToListConverter()
+                .convert(content)
+                .map((row) => row.map((cell) => cell.toString()).toList())
+                .toList();
+          } else {
+            // If file does not exist, initialize with a header
+            csvData = [
+              [
+                "ID",
+                "First Name",
+                "Last Name",
+                "Date of Birth",
+                "Place of Birth",
+                "Email",
+                "Phone",
+                "Address",
+                "Parent Name",
+                "Parent Address",
+                "Parent Email",
+                "Parent Phone",
+                "Image",
+                "Grade",
+                "Section",
+                "Type of Payment"
+              ]
+            ];
+          }
+
+          // Add new student data to CSV
+          csvData.add([
+            studentModel.id.toString(),
+            studentModel.firstName,
+            studentModel.lastName,
+            studentModel.dateOfBirth,
+            studentModel.placeOfBirth,
+            studentModel.email,
+            studentModel.phone,
+            studentModel.address,
+            studentModel.parentName,
+            studentModel.parentAddress,
+            studentModel.parentEmail,
+            studentModel.parentPhone,
+            studentModel.image ?? "",
+            studentModel.grade,
+            studentModel.section,
+            studentModel.typeapid,
+          ]);
+
+          // Convert to CSV string and save
+          String csvString = const ListToCsvConverter().convert(csvData);
+          await file.writeAsString(csvString);
+
+          debugPrint("Data saved to CSV successfully: $filePath");
+        } catch (e) {
+          debugPrint("Error saving CSV: $e");
+        }
+
         Get.find<NavigationControllerImp>()
             .replaceLastWidget(NavigationEnum.Students);
       }

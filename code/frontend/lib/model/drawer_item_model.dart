@@ -36,6 +36,10 @@ List<DrawerItemModel> drawerItem = [
       title: 'Users',
       icon: Assets.iconsUser,
       destination: NavigationEnum.Users),
+      DrawerItemModel(
+      title: 'Email Sender',
+      icon: Assets.iconsEmail,
+      destination: NavigationEnum.EmailSender),
   // DrawerItemModel(title: 'Chat', icon: Assets.iconsChat, NavigationEnum.NewStudent),
   // DrawerItemModel(title: 'Lastest Activity', icon: Assets.iconsActivity, NavigationEnum.Lastest),
 ];

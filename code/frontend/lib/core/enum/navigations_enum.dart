@@ -8,4 +8,5 @@ enum NavigationEnum {
   AddNewTeacher,
   StudentDetails,
   TeacherDetails,
+  EmailSender,
 }
