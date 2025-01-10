@@ -8,6 +8,8 @@ import 'package:sama/core/helper/random_id.dart';
 import 'package:sama/core/my_services.dart';
 import 'package:sama/core/utils/validation.dart';
 import 'package:sama/model/teacher_model.dart';
+import 'dart:io';
+import 'package:csv/csv.dart';
 
 abstract class AddNewTeacherController extends GetxController {}
 
@@ -54,48 +56,112 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
   AddNewTeacherControllerImp({this.teacher});
 
   Future<void> saveFileToLocal(XFile file) async {
-    file.saveTo("C:/Users/Ayman_Alkhatib/Desktop/${file.name}");
+    file.saveTo(
+        "C:/Users/Raouf/Desktop/Project/Teachers/TeachersPhoto/${file.name}");
   }
 
   Future addNewTeacher() async {
-    // if (key.currentState!.validate()) {
+    if (key.currentState!.validate()) {
+      TeacherModel teacherModel = TeacherModel(
+        id: teacher?.id ?? generateUniqueNumber(),
+        firstName: firstName.text,
+        lastName: lastName.text,
+        dateOfBirth: dateOfBirth.text,
+        placeOfBirth: placeOfBirth.text,
+        email: email.text,
+        phone: phone.text,
+        address: address.text,
+        university: university.text,
+        degree: degree.text,
+        startDate: startDate.text,
+        endDate: endDate.text,
+        city: city.text,
+        about: about.text,
+        expiration: expiration.text,
+        image: image?.path,
+      );
 
-    TeacherModel teacherModel = TeacherModel(
-      id: teacher?.id ?? generateUniqueNumber(),
-      firstName: firstName.text,
-      lastName: lastName.text,
-      dateOfBirth: dateOfBirth.text,
-      placeOfBirth: placeOfBirth.text,
-      email: email.text,
-      phone: phone.text,
-      address: address.text,
-      university: university.text,
-      degree: degree.text,
-      startDate: startDate.text,
-      endDate: endDate.text,
-      city: city.text,
-      about: about.text,
-      expiration: expiration.text,
-      image: image?.path,
-    );
-
-    if (teacher != null) {
-      final items = box.values.toList();
-      for (int i = 0; i < items.length; i++) {
-        if (items[i] is TeacherModel && items[i].id == teacher!.id) {
-          await box.putAt(i, teacherModel);
+      if (teacher != null) {
+        final items = box.values.toList();
+        for (int i = 0; i < items.length; i++) {
+          if (items[i] is TeacherModel && items[i].id == teacher!.id) {
+            await box.putAt(i, teacherModel);
+          }
         }
+      } else {
+        await box.add(teacherModel);
       }
-    } else {
-      await box.add(teacherModel);
+
+      // Save to CSV
+      try {
+        const filePath = 'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
+
+        File file = File(filePath);
+        List<List<String>> csvData;
+
+        if (await file.exists()) {
+          // Read existing CSV data
+          String content = await file.readAsString();
+          csvData = const CsvToListConverter()
+              .convert(content)
+              .map((row) => row.map((cell) => cell.toString()).toList())
+              .toList();
+        } else {
+          // If file does not exist, initialize with a header
+          csvData = [
+            [
+              "ID",
+              "First Name",
+              "Last Name",
+              "Date of Birth",
+              "Place of Birth",
+              "Email",
+              "Phone",
+              "Address",
+              "University",
+              "Degree",
+              "Start Date",
+              "End Date",
+              "City",
+              "About",
+              "Expiration",
+              "Image"
+            ]
+          ];
+        }
+
+        // Add new teacher data to CSV
+        csvData.add([
+          teacherModel.id.toString(),
+          teacherModel.firstName,
+          teacherModel.lastName,
+          teacherModel.dateOfBirth,
+          teacherModel.placeOfBirth,
+          teacherModel.email,
+          teacherModel.phone,
+          teacherModel.address,
+          teacherModel.university,
+          teacherModel.degree,
+          teacherModel.startDate,
+          teacherModel.endDate,
+          teacherModel.city,
+          teacherModel.about,
+          teacherModel.expiration,
+          teacherModel.image ?? "",
+        ]);
+
+        // Convert to CSV string and save
+        String csvString = const ListToCsvConverter().convert(csvData);
+        await file.writeAsString(csvString);
+
+        debugPrint("Data saved to CSV successfully: $filePath");
+      } catch (e) {
+        debugPrint("Error saving CSV: $e");
+      }
+
+      Get.find<NavigationControllerImp>()
+          .replaceLastWidget(NavigationEnum.Teachers);
     }
-
-    Get.find<NavigationControllerImp>()
-        .replaceLastWidget(NavigationEnum.Teachers);
-
-    // await box.clear();
-    // print(box.values.whereType<StudentModel>());
-    // }
   }
 
   void pickImage() async {
@@ -125,24 +191,20 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
 
   @override
   void onInit() async {
-    firstName = TextEditingController(text: teacher?.firstName ?? "Ayman");
-    lastName = TextEditingController(text: teacher?.lastName ?? "Smith");
-    dateOfBirth =
-        TextEditingController(text: teacher?.dateOfBirth ?? "1990-01-01");
-    placeOfBirth = TextEditingController(text: teacher?.placeOfBirth ?? "City");
-    email =
-        TextEditingController(text: teacher?.email ?? "example@example.com");
-    phone = TextEditingController(text: teacher?.phone ?? "123-456-7890");
-    address =
-        TextEditingController(text: teacher?.address ?? "123 Main Street");
-    university = TextEditingController(
-        text: teacher?.university ?? "Example University");
-    degree = TextEditingController(text: teacher?.degree ?? "Bachelor's");
-    startDate = TextEditingController(text: teacher?.startDate ?? "2010-09-01");
-    endDate = TextEditingController(text: teacher?.endDate ?? "2014-06-01");
-    city = TextEditingController(text: teacher?.city ?? "New York");
-    about = TextEditingController(text: teacher?.about ?? "No thing");
-    expiration = TextEditingController(text: teacher?.expiration ?? "No thing");
+    firstName = TextEditingController(text: teacher?.firstName);
+    lastName = TextEditingController(text: teacher?.lastName);
+    dateOfBirth = TextEditingController(text: teacher?.dateOfBirth);
+    placeOfBirth = TextEditingController(text: teacher?.placeOfBirth);
+    email = TextEditingController(text: teacher?.email);
+    phone = TextEditingController(text: teacher?.phone);
+    address = TextEditingController(text: teacher?.address);
+    university = TextEditingController(text: teacher?.university);
+    degree = TextEditingController(text: teacher?.degree);
+    startDate = TextEditingController(text: teacher?.startDate);
+    endDate = TextEditingController(text: teacher?.endDate);
+    city = TextEditingController(text: teacher?.city);
+    about = TextEditingController(text: teacher?.about);
+    expiration = TextEditingController(text: teacher?.expiration);
 
     image = teacher?.image != null && teacher!.image!.isNotEmpty
         ? XFile(teacher!.image!)
@@ -161,22 +223,20 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
     hintTeacherColumn1 = [
       ["First Name"],
       ["Email"],
-      [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      ],
-      ["24 Februari 1997"]
+      ["Rue des 1er Novembre, Villa 45 Rahmania, Wilaya of Algiers"],
+      ["ex: 2005-12-02"]
     ];
     hintTeacherColumn2 = [
       ["Last Name"],
-      ["+963912345678"],
+      ["Phone"],
     ];
     hintEducationTeacherColumn1 = [
-      ["University Akademi Historia"],
-      ["September 2013", "September 2017"],
+      ["University USTHB Algiers"],
+      ["ex: 2013-10-03", "ex: 2017-10-03"],
     ];
     hintEducationTeacherColumn2 = [
       ["History Major"],
-      ["Yogyakarta, Indonesia"],
+      ["Douera,Algier"],
     ];
 
     validationTeacherColumn1 = [
@@ -195,7 +255,7 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
     ];
     validationEducationTeacherColumn2 = [
       [Validation.length],
-      [Validation.isPhoneNumberValid],
+      [Validation.length],
     ];
 
     textControllerTeacherColumn1 = [
@@ -217,7 +277,7 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
       [city],
     ];
 
-    box =   MyAppServices().box;
+    box = MyAppServices().box;
 
     super.onInit();
   }

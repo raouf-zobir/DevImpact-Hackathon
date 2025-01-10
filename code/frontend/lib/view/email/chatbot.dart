@@ -8,79 +8,65 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+
 class EmailService {
   static const String _smtpHost = 'smtp.gmail.com';
   static const int _smtpPort = 587;
   static const String _username = 'hanini.firebase@gmail.com';
   static const String _password = 'bxah jsut ugqb ezae';
 
-  final String _csvPath = 'C:/Users/msi/Documents/students.csv';
+  final String _csvPath =
+      'C:/Users/Raouf/Desktop/Project/Students/students.csv';
   List<List<dynamic>>? _cachedData;
 
-  Future<List<String>> getEmailAddresses(String recipientType, {String? level}) async {
+  Future<List<String>> getEmailAddresses(String recipientType,
+      {String? level}) async {
     if (_cachedData == null) {
       final file = File(_csvPath);
       if (!await file.exists()) {
         throw Exception('CSV file not found at $_csvPath');
       }
-      
+
       final csvString = await file.readAsString();
       _cachedData = const CsvToListConverter().convert(csvString);
     }
 
-    final emailIndex = 5;  // "Email" column
-    final parentEmailIndex = 10;  // "Parent Email" column
-    
-    // Convert recipientType to lowercase for case-insensitive comparison
-    final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
+    const emailIndex = 5; // "Email" column
+    const parentEmailIndex = 10; // "Parent Email" column
 
-    return _cachedData!
-        .where((row) {
-          if (row.length <= emailIndex) return false;
-          if (row[0] == "ID") return false;
+    final normalizedRecipientType =
+        recipientType.replaceAll(' ', '').toLowerCase();
+    final List<String> emailList = [];
 
-          // Then check the recipient type
-          switch (normalizedRecipientType) {
-            case 'students':
-              return row[emailIndex].toString().isNotEmpty;
-            case 'parents':
-              return row[parentEmailIndex].toString().isNotEmpty;
-            case 'both':
-              return row[emailIndex].toString().isNotEmpty || 
-                     row[parentEmailIndex].toString().isNotEmpty;
-            default:
-              return false;
+    for (var row in _cachedData!) {
+      if (row.length <= emailIndex || row[0] == "ID") continue;
+
+      String? studentEmail = row[emailIndex]?.toString().trim();
+      String? parentEmail = row[parentEmailIndex]?.toString().trim();
+
+      switch (normalizedRecipientType) {
+        case 'students':
+          if (studentEmail != null && studentEmail.isNotEmpty) {
+            emailList.add(studentEmail);
           }
-        })
-        .expand((row) {
-          if (normalizedRecipientType == 'both') {
-            final emails = <String>[];
-            if (row[emailIndex].toString().isNotEmpty) {
-              emails.add(row[emailIndex].toString());
-            }
-            if (row[parentEmailIndex].toString().isNotEmpty) {
-              emails.add(row[parentEmailIndex].toString());
-            }
-            return emails;
+          break;
+        case 'parents':
+          if (parentEmail != null && parentEmail.isNotEmpty) {
+            emailList.add(parentEmail);
           }
-          
-          return [normalizedRecipientType == 'parents' 
-              ? row[parentEmailIndex].toString() 
-              : row[emailIndex].toString()];
-        })
-        .where((email) => email.isNotEmpty)
-        .toList();
-  }
+          break;
+        case 'both':
+          if (studentEmail != null && studentEmail.isNotEmpty) {
+            emailList.add(studentEmail);
+          }
+          if (parentEmail != null && parentEmail.isNotEmpty) {
+            emailList.add(parentEmail);
+          }
+          break;
+      }
+    }
 
-  // Helper method to parse recipient string and extract type and level
-  static RecipientInfo parseRecipientString(String recipients) {
-    // Remove any spaces and convert to lowercase for consistent matching
-    final parts = recipients.replaceAll(' ', '').toLowerCase().split('-').map((e) => e.trim()).toList();
-    final type = parts[0];
-    String? level;
-    
-    // We no longer check for level
-    return RecipientInfo(type: type, level: null);
+    return emailList.toSet().toList();
   }
 
   Future<void> sendEmail({
@@ -101,18 +87,39 @@ class EmailService {
       throw Exception('No recipients found for type: $recipientType');
     }
 
-    final message = Message()
-      ..from = Address(_username)
-      ..bccRecipients.addAll(emailAddresses.map((email) => Address(email)))
-      ..subject = subject
-      ..text = body;
+    // Print the number of recipients for verification
+    print('Preparing to send email to ${emailAddresses.length} recipients');
 
-    try {
-      final sendReport = await send(message, smtpServer);
-      print('Message sent: ${sendReport.toString()}');
-    } catch (e) {
-      throw Exception('Failed to send email: $e');
+    // Loop through each email address and send individual emails
+    for (var email in emailAddresses) {
+      final message = Message()
+        ..from = Address(_username)
+        ..recipients.add(Address(email))
+        ..subject = subject
+        ..text = body;
+
+      try {
+        final sendReport = await send(message, smtpServer);
+        print('Email sent successfully to $email');
+      } catch (e) {
+        print('Failed to send email to $email: $e');
+        // Handle the exception or continue sending to other recipients
+      }
     }
+
+    print('All emails have been sent.');
+  }
+
+  // Helper method to parse recipient string and extract type and level
+  static RecipientInfo parseRecipientString(String recipients) {
+    final parts = recipients
+        .replaceAll(' ', '')
+        .toLowerCase()
+        .split('-')
+        .map((e) => e.trim())
+        .toList();
+    final type = parts[0];
+    return RecipientInfo(type: type, level: null);
   }
 }
 
@@ -122,6 +129,7 @@ class RecipientInfo {
 
   RecipientInfo({required this.type, this.level});
 }
+
 class EmailData {
   final String recipients;
   final String purpose;
@@ -137,23 +145,32 @@ class EmailData {
 
   factory EmailData.fromResponse(String response) {
     // More flexible patterns that can handle various formats
-    final recipientsPattern = RegExp(r'Recipients?:\s*(.*?)(?=\n|Purpose:|$)', dotAll: true);
-    final purposePattern = RegExp(r'Purpose:\s*(.*?)(?=\n|Title:|Generated Output:|$)', dotAll: true);
+    final recipientsPattern =
+        RegExp(r'Recipients?:\s*(.*?)(?=\n|Purpose:|$)', dotAll: true);
+    final purposePattern = RegExp(
+        r'Purpose:\s*(.*?)(?=\n|Title:|Generated Output:|$)',
+        dotAll: true);
     final titlePattern = RegExp(r'Title:\s*(.*?)(?=\n|Text:|$)', dotAll: true);
     final textPattern = RegExp(r'Text:\s*(.*?)(?=\n\n|$)', dotAll: true);
 
     // Alternative patterns for different response formats
-    final altTitlePattern = RegExp(r'Generated Output:(?:.*?\n)*?(?:Title:)?\s*(.*?)(?=\n|Text:|$)', dotAll: true);
-    final altTextPattern = RegExp(r'(?:Text:|Dear\s+[^,\n]+,)\s*(.*?)(?=\n\n|$)', dotAll: true);
+    final altTitlePattern = RegExp(
+        r'Generated Output:(?:.*?\n)*?(?:Title:)?\s*(.*?)(?=\n|Text:|$)',
+        dotAll: true);
+    final altTextPattern =
+        RegExp(r'(?:Text:|Dear\s+[^,\n]+,)\s*(.*?)(?=\n\n|$)', dotAll: true);
 
     // Extract data with fallbacks
-    String extractWithFallback(RegExp primaryPattern, RegExp? alternativePattern, String defaultValue) {
-      final primaryMatch = primaryPattern.firstMatch(response)?.group(1)?.trim();
+    String extractWithFallback(RegExp primaryPattern,
+        RegExp? alternativePattern, String defaultValue) {
+      final primaryMatch =
+          primaryPattern.firstMatch(response)?.group(1)?.trim();
       if (primaryMatch != null && primaryMatch.isNotEmpty) {
         return primaryMatch;
       }
       if (alternativePattern != null) {
-        final altMatch = alternativePattern.firstMatch(response)?.group(1)?.trim();
+        final altMatch =
+            alternativePattern.firstMatch(response)?.group(1)?.trim();
         if (altMatch != null && altMatch.isNotEmpty) {
           return altMatch;
         }
@@ -198,9 +215,10 @@ class _ChatBotState extends State<ChatBot> {
   EmailData? _emailData;
   bool _isLoading = false;
   bool _showEmailPreview = false;
-   final EmailService _emailService = EmailService();
+  final EmailService _emailService = EmailService();
 
-  final GeminiAPIService _geminiAPIService = GeminiAPIService(apiKey: ApiConstants.apiKey);
+  final GeminiAPIService _geminiAPIService =
+      GeminiAPIService(apiKey: ApiConstants.apiKey);
 
   void _resetState() {
     setState(() {
@@ -214,7 +232,7 @@ class _ChatBotState extends State<ChatBot> {
     setState(() => _isLoading = true);
 
     try {
-      final prompt = '''
+      const prompt = '''
       You are an intelligent email assistant designed to extract recipient information, deduce the purpose of an email, and generate tailored content automatically without clutter or unnecessary responses. Your output must be concise and immediately actionable.
 
       Workflow
@@ -287,8 +305,9 @@ class _ChatBotState extends State<ChatBot> {
       Only prompt the user to clarify if absolutely necessary. If no specific level is mentioned for Students, default to “All levels.”
       ''';
 
-      final responseText = await _geminiAPIService.generateContent(prompt + _inputController.text);
-      
+      final responseText = await _geminiAPIService
+          .generateContent(prompt + _inputController.text);
+
       if (responseText != null) {
         setState(() {
           _emailData = EmailData.fromResponse(responseText);
@@ -318,7 +337,8 @@ class _ChatBotState extends State<ChatBot> {
           decoration: const InputDecoration(
             labelText: 'Enter your request',
             border: OutlineInputBorder(),
-            hintText: 'e.g., Notify all students about school closure tomorrow due to a water leak',
+            hintText:
+                'e.g., Notify all students about school closure tomorrow due to a water leak',
           ),
           maxLines: 3,
         ),
@@ -364,7 +384,7 @@ class _ChatBotState extends State<ChatBot> {
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 24),
-          Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
@@ -379,9 +399,10 @@ class _ChatBotState extends State<ChatBot> {
                   onPressed: () async {
                     try {
                       setState(() => _isLoading = true);
-                      
-                      final recipientInfo = EmailService.parseRecipientString(_emailData!.recipients);
-                      
+
+                      final recipientInfo = EmailService.parseRecipientString(
+                          _emailData!.recipients);
+
                       await _emailService.sendEmail(
                         recipientType: recipientInfo.type,
                         level: recipientInfo.level,
@@ -442,7 +463,7 @@ class _ChatBotState extends State<ChatBot> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (!_showEmailPreview) _buildInputSection(),
-            if (_showEmailPreview) 
+            if (_showEmailPreview)
               Expanded(
                 child: SingleChildScrollView(
                   child: _buildEmailPreview(),

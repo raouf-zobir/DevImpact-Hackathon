@@ -3,10 +3,12 @@ class Validation {
     if (phoneNumber == null || phoneNumber == '') {
       return "This field is required";
     }
-    if (!phoneNumber.startsWith("09")) {
-      return "Phone must start with 09";
+    if (!(phoneNumber.startsWith("05") ||
+        phoneNumber.startsWith("06") ||
+        phoneNumber.startsWith("07"))) {
+      return "Phone must start with 05, 06, or 07";
     }
-    if (phoneNumber.length < 10) {
+    if (phoneNumber.length < 10 || phoneNumber.length > 10) {
       return "Phone must be 10 characters long";
     }
     return null;
