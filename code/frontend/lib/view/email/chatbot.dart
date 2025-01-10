@@ -34,11 +34,10 @@ class _ChatBotState extends State<ChatBot> {
 
       Use natural language processing (NLP) to analyze the user’s request and deduce:
 
-<<<<<<< Updated upstream
       Recipients: Teachers, Students, or Both.
-=======
+
       Recipients: Teachers, Students, Parents or Both.
->>>>>>> Stashed changes
+
       Student Levels: L1, L2, L3, or All levels (if applicable).
       Avoid asking follow-up questions unless key details are ambiguous.
 
