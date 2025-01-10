@@ -15,7 +15,6 @@ import 'package:sama/model/section_model.dart';
 import 'package:sama/model/student_model.dart';
 import 'dart:io';
 import 'package:csv/csv.dart';
-import 'package:path_provider/path_provider.dart';
 
 abstract class AddNewStudentController extends GetxController {
   selectChoicePayment(PaymentEnum paymentEnum);
