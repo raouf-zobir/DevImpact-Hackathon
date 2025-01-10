@@ -1,5 +1,6 @@
 import 'package:sama/core/constants/assets.dart';
 import 'package:sama/core/enum/navigations_enum.dart';
+import 'package:flutter/material.dart';
 
 class DrawerItemModel {
   final String title;
@@ -42,4 +43,9 @@ List<DrawerItemModel> drawerItem = [
       destination: NavigationEnum.EmailSender),
   // DrawerItemModel(title: 'Chat', icon: Assets.iconsChat, NavigationEnum.NewStudent),
   // DrawerItemModel(title: 'Lastest Activity', icon: Assets.iconsActivity, NavigationEnum.Lastest),
+  DrawerItemModel(
+    title: "Absence",
+    icon: Assets.iconsCalendar,
+    destination: NavigationEnum.Absence,
+  ),
 ];
