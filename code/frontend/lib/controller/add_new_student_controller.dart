@@ -26,7 +26,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
 
   late Box box;
   late PaymentEnum statePayment;
-  String grade = levels[levels.length - 1];
+  String grade = levels[0];
   XFile? image;
   final StudentModel? student;
 
@@ -251,7 +251,7 @@ Future addNewStudent() async {
     initListAndController();
     box = MyAppServices().box;
     if (student == null) {
-      setGrade(levels[levels.length - 1]);
+      setGrade(levels[0]);
     }
     super.onInit();
   }
