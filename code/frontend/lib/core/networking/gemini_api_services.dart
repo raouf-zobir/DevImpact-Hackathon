@@ -7,7 +7,7 @@ class GeminiAPIService {
 
   GeminiAPIService({
     required this.apiKey,
-    this.modelVersion = 'gemini-1.5-flash',
+    this.modelVersion = 'gemini-2.0-flash-exp',
   });
 
   Future<String?> generateContent(String prompt) async {

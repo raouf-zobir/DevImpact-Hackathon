@@ -13,6 +13,9 @@ import 'package:sama/core/my_services.dart';
 import 'package:sama/core/utils/validation.dart';
 import 'package:sama/model/section_model.dart';
 import 'package:sama/model/student_model.dart';
+import 'dart:io';
+import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
 
 abstract class AddNewStudentController extends GetxController {
   selectChoicePayment(PaymentEnum paymentEnum);
@@ -67,62 +70,135 @@ class AddNewStudentControllerImp extends AddNewStudentController {
     Get.find<NavigationControllerImp>().replaceLastWidget(NavigationEnum.Students);
   }
 
-  Future addNewStudent() async {
-    if (globalKey.currentState!.validate()) {
-      if (activeSection == null) {
-        ScaffoldMessenger.of(Get.context!).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Section is required. Please choose one. If no sections are found, create a new section.',
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: AppColors.errorRed,
-            action: SnackBarAction(
-              label: 'Create Section',
-              textColor: AppColors.lightPurple,
-              onPressed: () {
-                Get.find<NavigationControllerImp>()
-                    .replaceLastWidget(NavigationEnum.Classes, info: {
-                  "isActive": (int.tryParse(grade.substring(grade.length - 2).trim()) ?? 1) - 1
-                });
-              },
-            ),
+
+
+Future addNewStudent() async {
+  if (globalKey.currentState!.validate()) {
+    if (activeSection == null) {
+      ScaffoldMessenger.of(Get.context!).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Section is required. Please choose one. If no sections are found, create a new section.',
+            style: TextStyle(color: Colors.white),
           ),
-        );
-      } else {
-        StudentModel studentModel = StudentModel(
-          id: student?.id ?? generateUniqueNumber(),
-          firstName: firstName.text,
-          lastName: lastName.text,
-          dateOfBirth: dateOfBirth.text,
-          placeOfBirth: placeOfBirth.text,
-          email: email.text,
-          phone: phone.text,
-          address: address.text,
-          parentName: parentName.text,
-          parentAddress: parentAddress.text,
-          parentEmail: parentEmail.text,
-          parentPhone: parentPhone.text,
-          image: image?.path,
-          grade: grade,
-          section: activeSection!,
-          typeapid: statePayment.name,
-        );
-        if (student != null) {
-          final items = box.values.toList();
-          for (int i = 0; i < items.length; i++) {
-            if (items[i] is StudentModel && items[i].id == student!.id) {
-              await box.putAt(i, studentModel);
-            }
+          backgroundColor: AppColors.errorRed,
+          action: SnackBarAction(
+            label: 'Create Section',
+            textColor: AppColors.lightPurple,
+            onPressed: () {
+              Get.find<NavigationControllerImp>()
+                  .replaceLastWidget(NavigationEnum.Classes, info: {
+                "isActive": (int.tryParse(grade.substring(grade.length - 2).trim()) ?? 1) - 1
+              });
+            },
+          ),
+        ),
+      );
+    } else {
+      StudentModel studentModel = StudentModel(
+        id: student?.id ?? generateUniqueNumber(),
+        firstName: firstName.text,
+        lastName: lastName.text,
+        dateOfBirth: dateOfBirth.text,
+        placeOfBirth: placeOfBirth.text,
+        email: email.text,
+        phone: phone.text,
+        address: address.text,
+        parentName: parentName.text,
+        parentAddress: parentAddress.text,
+        parentEmail: parentEmail.text,
+        parentPhone: parentPhone.text,
+        image: image?.path,
+        grade: grade,
+        section: activeSection!,
+        typeapid: statePayment.name,
+      );
+
+      // Save to Hive
+      if (student != null) {
+        final items = box.values.toList();
+        for (int i = 0; i < items.length; i++) {
+          if (items[i] is StudentModel && items[i].id == student!.id) {
+            await box.putAt(i, studentModel);
           }
-        } else {
-          await box.add(studentModel);
         }
-        Get.find<NavigationControllerImp>().replaceLastWidget(NavigationEnum.Students);
+      } else {
+        await box.add(studentModel);
       }
+
+      // Save to CSV
+      try {
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/students.csv';
+
+        File file = File(filePath);
+        List<List<String>> csvData;
+
+        if (await file.exists()) {
+          // Read existing CSV data
+          String content = await file.readAsString();
+          csvData = const CsvToListConverter()
+              .convert(content)
+              .map((row) => row.map((cell) => cell.toString()).toList())
+              .toList();
+        } else {
+          // If file does not exist, initialize with a header
+          csvData = [
+            [
+              "ID",
+              "First Name",
+              "Last Name",
+              "Date of Birth",
+              "Place of Birth",
+              "Email",
+              "Phone",
+              "Address",
+              "Parent Name",
+              "Parent Address",
+              "Parent Email",
+              "Parent Phone",
+              "Image",
+              "Grade",
+              "Section",
+              "Type of Payment"
+            ]
+          ];
+        }
+
+        // Add new student data to CSV
+        csvData.add([
+          studentModel.id.toString(),
+          studentModel.firstName,
+          studentModel.lastName,
+          studentModel.dateOfBirth,
+          studentModel.placeOfBirth,
+          studentModel.email,
+          studentModel.phone,
+          studentModel.address,
+          studentModel.parentName,
+          studentModel.parentAddress,
+          studentModel.parentEmail,
+          studentModel.parentPhone,
+          studentModel.image ?? "",
+          studentModel.grade,
+          studentModel.section,
+          studentModel.typeapid,
+        ]);
+
+        // Convert to CSV string and save
+        String csvString = const ListToCsvConverter().convert(csvData);
+        await file.writeAsString(csvString);
+
+        debugPrint("Data saved to CSV successfully: $filePath");
+      } catch (e) {
+        debugPrint("Error saving CSV: $e");
+      }
+
+      Get.find<NavigationControllerImp>().replaceLastWidget(NavigationEnum.Students);
     }
-    Get.find<FinanceControllerImp>().resetController();
   }
+  Get.find<FinanceControllerImp>().resetController();
+}
 
   void pickImage() async {
     final picker = ImagePicker();

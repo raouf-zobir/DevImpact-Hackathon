@@ -4,6 +4,70 @@ import 'package:get/get.dart';
 import 'package:sama/core/networking/gemini_api_services.dart';
 import 'package:sama/core/networking/api_constant.dart';
 
+class EmailData {
+  final String recipients;
+  final String purpose;
+  final String title;
+  final String text;
+
+  EmailData({
+    required this.recipients,
+    required this.purpose,
+    required this.title,
+    required this.text,
+  });
+
+  factory EmailData.fromResponse(String response) {
+    // More flexible patterns that can handle various formats
+    final recipientsPattern = RegExp(r'Recipients?:\s*(.*?)(?=\n|Purpose:|$)', dotAll: true);
+    final purposePattern = RegExp(r'Purpose:\s*(.*?)(?=\n|Title:|Generated Output:|$)', dotAll: true);
+    final titlePattern = RegExp(r'Title:\s*(.*?)(?=\n|Text:|$)', dotAll: true);
+    final textPattern = RegExp(r'Text:\s*(.*?)(?=\n\n|$)', dotAll: true);
+
+    // Alternative patterns for different response formats
+    final altTitlePattern = RegExp(r'Generated Output:(?:.*?\n)*?(?:Title:)?\s*(.*?)(?=\n|Text:|$)', dotAll: true);
+    final altTextPattern = RegExp(r'(?:Text:|Dear\s+[^,\n]+,)\s*(.*?)(?=\n\n|$)', dotAll: true);
+
+    // Extract data with fallbacks
+    String extractWithFallback(RegExp primaryPattern, RegExp? alternativePattern, String defaultValue) {
+      final primaryMatch = primaryPattern.firstMatch(response)?.group(1)?.trim();
+      if (primaryMatch != null && primaryMatch.isNotEmpty) {
+        return primaryMatch;
+      }
+      if (alternativePattern != null) {
+        final altMatch = alternativePattern.firstMatch(response)?.group(1)?.trim();
+        if (altMatch != null && altMatch.isNotEmpty) {
+          return altMatch;
+        }
+      }
+      return defaultValue;
+    }
+
+    // Handle cases where the response might be just the email text without headers
+    if (!response.contains('Recipients:') && !response.contains('Title:')) {
+      final lines = response.split('\n');
+      return EmailData(
+        recipients: 'All',
+        purpose: '',
+        title: lines.first.trim(),
+        text: lines.skip(1).join('\n').trim(),
+      );
+    }
+
+    return EmailData(
+      recipients: extractWithFallback(recipientsPattern, null, 'All'),
+      purpose: extractWithFallback(purposePattern, null, ''),
+      title: extractWithFallback(titlePattern, altTitlePattern, 'New Message'),
+      text: extractWithFallback(textPattern, altTextPattern, ''),
+    );
+  }
+
+  // Helper method to validate if the email data is complete
+  bool isValid() {
+    return text.isNotEmpty && title.isNotEmpty;
+  }
+}
+
 class ChatBot extends StatefulWidget {
   const ChatBot({Key? key}) : super(key: key);
 
@@ -13,10 +77,19 @@ class ChatBot extends StatefulWidget {
 
 class _ChatBotState extends State<ChatBot> {
   final TextEditingController _inputController = TextEditingController();
-  String _responseText = '';
+  EmailData? _emailData;
   bool _isLoading = false;
+  bool _showEmailPreview = false;
 
   final GeminiAPIService _geminiAPIService = GeminiAPIService(apiKey: ApiConstants.apiKey);
+
+  void _resetState() {
+    setState(() {
+      _inputController.clear();
+      _emailData = null;
+      _showEmailPreview = false;
+    });
+  }
 
   Future<void> _sendMessage() async {
     setState(() => _isLoading = true);
@@ -96,10 +169,13 @@ class _ChatBotState extends State<ChatBot> {
       ''';
 
       final responseText = await _geminiAPIService.generateContent(prompt + _inputController.text);
-
-      setState(() {
-        _responseText = responseText ?? 'No response from AI';
-      });
+      
+      if (responseText != null) {
+        setState(() {
+          _emailData = EmailData.fromResponse(responseText);
+          _showEmailPreview = true;
+        });
+      }
     } catch (e) {
       log('Error sending message: $e');
       Get.snackbar(
@@ -114,11 +190,103 @@ class _ChatBotState extends State<ChatBot> {
     }
   }
 
+  Widget _buildInputSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _inputController,
+          decoration: const InputDecoration(
+            labelText: 'Enter your request',
+            border: OutlineInputBorder(),
+            hintText: 'e.g., Notify all students about school closure tomorrow due to a water leak',
+          ),
+          maxLines: 3,
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _sendMessage,
+          child: _isLoading
+              ? const CircularProgressIndicator()
+              : const Text('Generate Email'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmailPreview() {
+    if (_emailData == null) return const SizedBox.shrink();
+
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _emailData!.title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'To: ${_emailData!.recipients}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+            const Divider(height: 24),
+            Text(
+              _emailData!.text,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _resetState,
+                  child: const Text('Reject'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    // Implement your send functionality here
+                    Get.snackbar(
+                      'Success',
+                      'Email sent successfully!',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.green,
+                      colorText: Colors.white,
+                    );
+                    _resetState();
+                  },
+                  child: const Text('Send Email'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI ChatBot'),
+        title: const Text('Email Assistant'),
         centerTitle: true,
       ),
       body: Padding(
@@ -126,27 +294,11 @@ class _ChatBotState extends State<ChatBot> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: _inputController,
-              decoration: const InputDecoration(
-                labelText: 'Enter your request',
-                border: OutlineInputBorder(),
-                hintText: 'e.g., Notify all students about school closure tomorrow due to a water leak',
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _sendMessage,
-              child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('Send Message'),
-            ),
-            const SizedBox(height: 24),
-            if (_responseText.isNotEmpty)
+            if (!_showEmailPreview) _buildInputSection(),
+            if (_showEmailPreview) 
               Expanded(
                 child: SingleChildScrollView(
-                  child: Text(_responseText),
+                  child: _buildEmailPreview(),
                 ),
               ),
           ],
