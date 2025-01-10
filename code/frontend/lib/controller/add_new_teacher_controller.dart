@@ -8,6 +8,8 @@ import 'package:sama/core/helper/random_id.dart';
 import 'package:sama/core/my_services.dart';
 import 'package:sama/core/utils/validation.dart';
 import 'package:sama/model/teacher_model.dart';
+import 'dart:io';
+import 'package:csv/csv.dart';
 
 abstract class AddNewTeacherController extends GetxController {}
 
@@ -88,6 +90,73 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
         }
       } else {
         await box.add(teacherModel);
+      }
+
+      // Save to CSV
+      try {
+        const filePath = 'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
+
+        File file = File(filePath);
+        List<List<String>> csvData;
+
+        if (await file.exists()) {
+          // Read existing CSV data
+          String content = await file.readAsString();
+          csvData = const CsvToListConverter()
+              .convert(content)
+              .map((row) => row.map((cell) => cell.toString()).toList())
+              .toList();
+        } else {
+          // If file does not exist, initialize with a header
+          csvData = [
+            [
+              "ID",
+              "First Name",
+              "Last Name",
+              "Date of Birth",
+              "Place of Birth",
+              "Email",
+              "Phone",
+              "Address",
+              "University",
+              "Degree",
+              "Start Date",
+              "End Date",
+              "City",
+              "About",
+              "Expiration",
+              "Image"
+            ]
+          ];
+        }
+
+        // Add new teacher data to CSV
+        csvData.add([
+          teacherModel.id.toString(),
+          teacherModel.firstName,
+          teacherModel.lastName,
+          teacherModel.dateOfBirth,
+          teacherModel.placeOfBirth,
+          teacherModel.email,
+          teacherModel.phone,
+          teacherModel.address,
+          teacherModel.university,
+          teacherModel.degree,
+          teacherModel.startDate,
+          teacherModel.endDate,
+          teacherModel.city,
+          teacherModel.about,
+          teacherModel.expiration,
+          teacherModel.image ?? "",
+        ]);
+
+        // Convert to CSV string and save
+        String csvString = const ListToCsvConverter().convert(csvData);
+        await file.writeAsString(csvString);
+
+        debugPrint("Data saved to CSV successfully: $filePath");
+      } catch (e) {
+        debugPrint("Error saving CSV: $e");
       }
 
       Get.find<NavigationControllerImp>()
