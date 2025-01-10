@@ -15,54 +15,72 @@ class EmailService {
   static const String _username = 'hanini.firebase@gmail.com';
   static const String _password = 'bxah jsut ugqb ezae';
 
-  final String _csvPath =
-      'C:/Users/Raouf/Desktop/Project/Students/students.csv';
-  List<List<dynamic>>? _cachedData;
+  final String _studentsCsvPath = 'C:/Users/Raouf/Desktop/Project/Students/students.csv';
+  final String _teachersCsvPath = 'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
+  
+  Map<String, List<List<dynamic>>> _cachedData = {};
 
-  Future<List<String>> getEmailAddresses(String recipientType,
-      {String? level}) async {
-    if (_cachedData == null) {
-      final file = File(_csvPath);
+  Future<void> _loadCsvData(String path, String type) async {
+    if (!_cachedData.containsKey(type)) {
+      final file = File(path);
       if (!await file.exists()) {
-        throw Exception('CSV file not found at $_csvPath');
+        throw Exception('CSV file not found at $path');
       }
 
       final csvString = await file.readAsString();
-      _cachedData = const CsvToListConverter().convert(csvString);
+      _cachedData[type] = const CsvToListConverter().convert(csvString);
     }
+  }
 
-    const emailIndex = 5; // "Email" column
-    const parentEmailIndex = 10; // "Parent Email" column
-
-    final normalizedRecipientType =
-        recipientType.replaceAll(' ', '').toLowerCase();
+  Future<List<String>> getEmailAddresses(String recipientType,
+      {String? level}) async {
+    final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
 
-    for (var row in _cachedData!) {
-      if (row.length <= emailIndex || row[0] == "ID") continue;
+    // Load appropriate CSV data based on recipient type
+    if (normalizedRecipientType.contains('teachers')) {
+      await _loadCsvData(_teachersCsvPath, 'teachers');
+      const emailIndex = 5; // Adjust this index based on your teachers.csv structure
 
-      String? studentEmail = row[emailIndex]?.toString().trim();
-      String? parentEmail = row[parentEmailIndex]?.toString().trim();
+      for (var row in _cachedData['teachers']!) {
+        if (row.length <= emailIndex || row[0] == "ID") continue;
 
-      switch (normalizedRecipientType) {
-        case 'students':
-          if (studentEmail != null && studentEmail.isNotEmpty) {
-            emailList.add(studentEmail);
-          }
-          break;
-        case 'parents':
-          if (parentEmail != null && parentEmail.isNotEmpty) {
-            emailList.add(parentEmail);
-          }
-          break;
-        case 'both':
-          if (studentEmail != null && studentEmail.isNotEmpty) {
-            emailList.add(studentEmail);
-          }
-          if (parentEmail != null && parentEmail.isNotEmpty) {
-            emailList.add(parentEmail);
-          }
-          break;
+        String? teacherEmail = row[emailIndex]?.toString().trim();
+        if (teacherEmail != null && teacherEmail.isNotEmpty) {
+          emailList.add(teacherEmail);
+        }
+      }
+    } else {
+      await _loadCsvData(_studentsCsvPath, 'students');
+      const emailIndex = 5; // Student email column
+      const parentEmailIndex = 10; // Parent email column
+
+      for (var row in _cachedData['students']!) {
+        if (row.length <= emailIndex || row[0] == "ID") continue;
+
+        String? studentEmail = row[emailIndex]?.toString().trim();
+        String? parentEmail = row[parentEmailIndex]?.toString().trim();
+
+        switch (normalizedRecipientType) {
+          case 'students':
+            if (studentEmail != null && studentEmail.isNotEmpty) {
+              emailList.add(studentEmail);
+            }
+            break;
+          case 'parents':
+            if (parentEmail != null && parentEmail.isNotEmpty) {
+              emailList.add(parentEmail);
+            }
+            break;
+          case 'both':
+            if (studentEmail != null && studentEmail.isNotEmpty) {
+              emailList.add(studentEmail);
+            }
+            if (parentEmail != null && parentEmail.isNotEmpty) {
+              emailList.add(parentEmail);
+            }
+            break;
+        }
       }
     }
 
@@ -87,10 +105,8 @@ class EmailService {
       throw Exception('No recipients found for type: $recipientType');
     }
 
-    // Print the number of recipients for verification
     print('Preparing to send email to ${emailAddresses.length} recipients');
 
-    // Loop through each email address and send individual emails
     for (var email in emailAddresses) {
       final message = Message()
         ..from = Address(_username)
@@ -103,14 +119,12 @@ class EmailService {
         print('Email sent successfully to $email');
       } catch (e) {
         print('Failed to send email to $email: $e');
-        // Handle the exception or continue sending to other recipients
       }
     }
 
     print('All emails have been sent.');
   }
 
-  // Helper method to parse recipient string and extract type and level
   static RecipientInfo parseRecipientString(String recipients) {
     final parts = recipients
         .replaceAll(' ', '')
