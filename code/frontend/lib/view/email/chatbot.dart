@@ -16,7 +16,7 @@ class EmailService {
   static const String _password = 'bxah jsut ugqb ezae';
 
   final String _csvPath =
-      'C:/Users/Raouf/Desktop/Project/Students/students.csv';
+      'C:/Users/Anas/Desktop/Project/Students/students.csv';
   List<List<dynamic>>? _cachedData;
 
   Future<List<String>> getEmailAddresses(String recipientType,

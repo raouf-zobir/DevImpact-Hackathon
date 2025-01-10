@@ -63,7 +63,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
 
   Future<void> saveFileToLocal(XFile file) async {
     file.saveTo(
-        "C:/Users/Raouf/Desktop/Project/Students/StudentsPhoto/${file.name}");
+        "C:/Users/ANAS/Desktop/Project/Students/StudentsPhoto/${file.name}");
   }
 
   void pop() {
@@ -132,7 +132,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
         try {
           // final directory = await getApplicationDocumentsDirectory();
           const filePath =
-              'C:/Users/Raouf/Desktop/Project/Students/students.csv';
+              'C:/Users/ANAS/Desktop/Project/Students/students.csv';
 
           File file = File(filePath);
           List<List<String>> csvData;
