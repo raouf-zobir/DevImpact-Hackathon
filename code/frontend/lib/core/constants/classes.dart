@@ -1,16 +1,7 @@
 List<String> levels = [
-  'Primary School - Grade 1',
-  'Primary School - Grade 2',
-  'Primary School - Grade 3',
-  'Primary School - Grade 4',
-  'Primary School - Grade 5',
-  'Primary School - Grade 6',
-  'Intermediate School - Grade 7',
-  'Intermediate School - Grade 8',
-  'Intermediate School - Grade 9',
-  'Secondary School - Grade 10',
-  'Secondary School - Grade 11',
-  'Secondary School - Grade 12',
+  "Grade 1",
+  "Grade 2",
+  "Grade 3",
 ];
 List<String> romanNumerals = [
   'I',

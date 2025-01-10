@@ -25,7 +25,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
 
   late Box box;
   late PaymentEnum statePayment;
-  String grade = levels[levels.length - 1];
+  String grade = levels[0];
   XFile? image;
   final StudentModel? student;
 
@@ -63,7 +63,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
 
   Future<void> saveFileToLocal(XFile file) async {
     file.saveTo(
-        "C:/Users/Raouf/Desktop/Project/Students/StudentsPhoto/${file.name}");
+        "C:/Users/ANAS/Desktop/Project/Students/StudentsPhoto/${file.name}");
   }
 
   void pop() {
@@ -132,7 +132,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
         try {
           // final directory = await getApplicationDocumentsDirectory();
           const filePath =
-              'C:/Users/Raouf/Desktop/Project/Students/students.csv';
+              'C:/Users/ANAS/Desktop/Project/Students/students.csv';
 
           File file = File(filePath);
           List<List<String>> csvData;
@@ -234,9 +234,14 @@ class AddNewStudentControllerImp extends AddNewStudentController {
 
   void setGrade(String value) {
     grade = value;
-    sections = box.values.whereType<SectionModel>().where((e) {
-      return value.contains(e.level) && value.contains(e.grade);
+    // Extract grade number (1, 2, or 3) from the grade string
+    String gradeNumber = value.split(' ')[1];
+    
+    sections = box.values.whereType<SectionModel>().where((section) {
+      // Compare just the grade number part
+      return section.grade == "Grade $gradeNumber";
     }).toList();
+
     if (sections.isNotEmpty) {
       activeSection = sections.last.name;
     } else {
@@ -256,7 +261,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
     initListAndController();
     box = MyAppServices().box;
     if (student == null) {
-      setGrade(levels[levels.length - 1]);
+      setGrade(levels[0]);
     }
     super.onInit();
   }
