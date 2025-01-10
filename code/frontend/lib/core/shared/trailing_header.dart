@@ -33,19 +33,16 @@ class TrailingHeader extends StatelessWidget {
         Flexible(
           flex: 3,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Omar Ayman",
-                style: AppFontStyle.styleSemiBold14(context).copyWith(
-                  overflow: TextOverflow.ellipsis,
-                ),
+                "Hamzaoui Nadir",
+                style: AppFontStyle.styleSemiBold14(context),
               ),
               Text(
                 "Admin",
                 style: AppFontStyle.styleSemiBold14(context).copyWith(
-                  color: AppColors.darkGray,
-                  overflow: TextOverflow.ellipsis,
+                  color: const Color.fromARGB(255, 49, 49, 239),
                 ),
               ),
             ],
@@ -55,16 +52,9 @@ class TrailingHeader extends StatelessWidget {
         Container(
           width: 55 * getScaleFactor(context),
           height: 55 * getScaleFactor(context),
-          // padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            // color: AppColors.primaryPurple,
             borderRadius: BorderRadius.circular(100),
           ),
-          // child: SvgPicture.asset(
-          //   Assets.iconsUser,
-          //   colorFilter: const ColorFilter.mode(AppColors.backgroundWhite, BlendMode.srcIn),
-          // ),
-
           child: Image.asset(
             Assets.imagesLogo,
             color: AppColors.primaryPurple,
@@ -100,7 +90,8 @@ class CustomIconButton extends StatelessWidget {
         ),
         child: SvgPicture.asset(
           icon,
-          colorFilter: const ColorFilter.mode(AppColors.textBlack, BlendMode.srcIn),
+          colorFilter:
+              const ColorFilter.mode(AppColors.textBlack, BlendMode.srcIn),
         ),
       ),
     );
