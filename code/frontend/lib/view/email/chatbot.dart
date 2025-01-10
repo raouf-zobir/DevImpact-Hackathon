@@ -4,6 +4,124 @@ import 'package:get/get.dart';
 import 'package:sama/core/networking/gemini_api_services.dart';
 import 'package:sama/core/networking/api_constant.dart';
 
+import 'dart:io';
+import 'package:csv/csv.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
+class EmailService {
+  static const String _smtpHost = 'smtp.gmail.com';
+  static const int _smtpPort = 587;
+  static const String _username = 'hanini.firebase@gmail.com';
+  static const String _password = 'bxah jsut ugqb ezae';
+
+  final String _csvPath = 'C:/Users/msi/Documents/students.csv';
+  List<List<dynamic>>? _cachedData;
+
+  Future<List<String>> getEmailAddresses(String recipientType, {String? level}) async {
+    if (_cachedData == null) {
+      final file = File(_csvPath);
+      if (!await file.exists()) {
+        throw Exception('CSV file not found at $_csvPath');
+      }
+      
+      final csvString = await file.readAsString();
+      _cachedData = const CsvToListConverter().convert(csvString);
+    }
+
+    final emailIndex = 5;  // "Email" column
+    final parentEmailIndex = 10;  // "Parent Email" column
+    
+    // Convert recipientType to lowercase for case-insensitive comparison
+    final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
+
+    return _cachedData!
+        .where((row) {
+          if (row.length <= emailIndex) return false;
+          if (row[0] == "ID") return false;
+
+          // Then check the recipient type
+          switch (normalizedRecipientType) {
+            case 'students':
+              return row[emailIndex].toString().isNotEmpty;
+            case 'parents':
+              return row[parentEmailIndex].toString().isNotEmpty;
+            case 'both':
+              return row[emailIndex].toString().isNotEmpty || 
+                     row[parentEmailIndex].toString().isNotEmpty;
+            default:
+              return false;
+          }
+        })
+        .expand((row) {
+          if (normalizedRecipientType == 'both') {
+            final emails = <String>[];
+            if (row[emailIndex].toString().isNotEmpty) {
+              emails.add(row[emailIndex].toString());
+            }
+            if (row[parentEmailIndex].toString().isNotEmpty) {
+              emails.add(row[parentEmailIndex].toString());
+            }
+            return emails;
+          }
+          
+          return [normalizedRecipientType == 'parents' 
+              ? row[parentEmailIndex].toString() 
+              : row[emailIndex].toString()];
+        })
+        .where((email) => email.isNotEmpty)
+        .toList();
+  }
+
+  // Helper method to parse recipient string and extract type and level
+  static RecipientInfo parseRecipientString(String recipients) {
+    // Remove any spaces and convert to lowercase for consistent matching
+    final parts = recipients.replaceAll(' ', '').toLowerCase().split('-').map((e) => e.trim()).toList();
+    final type = parts[0];
+    String? level;
+    
+    // We no longer check for level
+    return RecipientInfo(type: type, level: null);
+  }
+
+  Future<void> sendEmail({
+    required String recipientType,
+    String? level,
+    required String subject,
+    required String body,
+  }) async {
+    final smtpServer = SmtpServer(
+      _smtpHost,
+      port: _smtpPort,
+      username: _username,
+      password: _password,
+    );
+
+    final emailAddresses = await getEmailAddresses(recipientType, level: level);
+    if (emailAddresses.isEmpty) {
+      throw Exception('No recipients found for type: $recipientType');
+    }
+
+    final message = Message()
+      ..from = Address(_username)
+      ..bccRecipients.addAll(emailAddresses.map((email) => Address(email)))
+      ..subject = subject
+      ..text = body;
+
+    try {
+      final sendReport = await send(message, smtpServer);
+      print('Message sent: ${sendReport.toString()}');
+    } catch (e) {
+      throw Exception('Failed to send email: $e');
+    }
+  }
+}
+
+class RecipientInfo {
+  final String type;
+  final String? level;
+
+  RecipientInfo({required this.type, this.level});
+}
 class EmailData {
   final String recipients;
   final String purpose;
@@ -80,6 +198,7 @@ class _ChatBotState extends State<ChatBot> {
   EmailData? _emailData;
   bool _isLoading = false;
   bool _showEmailPreview = false;
+   final EmailService _emailService = EmailService();
 
   final GeminiAPIService _geminiAPIService = GeminiAPIService(apiKey: ApiConstants.apiKey);
 
@@ -245,7 +364,7 @@ class _ChatBotState extends State<ChatBot> {
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 24),
-            Row(
+          Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
@@ -257,18 +376,46 @@ class _ChatBotState extends State<ChatBot> {
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton(
-                  onPressed: () {
-                    // Implement your send functionality here
-                    Get.snackbar(
-                      'Success',
-                      'Email sent successfully!',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.green,
-                      colorText: Colors.white,
-                    );
-                    _resetState();
+                  onPressed: () async {
+                    try {
+                      setState(() => _isLoading = true);
+                      
+                      final recipientInfo = EmailService.parseRecipientString(_emailData!.recipients);
+                      
+                      await _emailService.sendEmail(
+                        recipientType: recipientInfo.type,
+                        level: recipientInfo.level,
+                        subject: _emailData!.title,
+                        body: _emailData!.text,
+                      );
+
+                      Get.snackbar(
+                        'Success',
+                        'Email sent successfully!',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.green,
+                        colorText: Colors.white,
+                      );
+                      _resetState();
+                    } catch (e) {
+                      Get.snackbar(
+                        'Error',
+                        'Failed to send email: $e',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.red,
+                        colorText: Colors.white,
+                      );
+                    } finally {
+                      setState(() => _isLoading = false);
+                    }
                   },
-                  child: const Text('Send Email'),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                      : const Text('Send Email'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,

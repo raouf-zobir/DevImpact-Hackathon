@@ -127,73 +127,72 @@ Future addNewStudent() async {
       }
 
       // Save to CSV
-      try {
-        final directory = await getApplicationDocumentsDirectory();
-        final filePath = '${directory.path}/students.csv';
+     try {
+  final directory = await getApplicationDocumentsDirectory();
+  final filePath = '${directory.path}/students.csv';
 
-        File file = File(filePath);
-        List<List<String>> csvData;
+  File file = File(filePath);
+  List<List<String>> csvData;
 
-        if (await file.exists()) {
-          // Read existing CSV data
-          String content = await file.readAsString();
-          csvData = const CsvToListConverter()
-              .convert(content)
-              .map((row) => row.map((cell) => cell.toString()).toList())
-              .toList();
-        } else {
-          // If file does not exist, initialize with a header
-          csvData = [
-            [
-              "ID",
-              "First Name",
-              "Last Name",
-              "Date of Birth",
-              "Place of Birth",
-              "Email",
-              "Phone",
-              "Address",
-              "Parent Name",
-              "Parent Address",
-              "Parent Email",
-              "Parent Phone",
-              "Image",
-              "Grade",
-              "Section",
-              "Type of Payment"
-            ]
-          ];
-        }
+  if (await file.exists()) {
+    // Read existing CSV data
+    String content = await file.readAsString();
+    csvData = const CsvToListConverter(eol: '\n')
+        .convert(content)
+        .map((row) => row.map((cell) => cell.toString()).toList())
+        .toList();
+  } else {
+    // If file does not exist, initialize with a header
+    csvData = [
+      [
+        "ID",
+        "First Name",
+        "Last Name",
+        "Date of Birth",
+        "Place of Birth",
+        "Email",
+        "Phone",
+        "Address",
+        "Parent Name",
+        "Parent Address",
+        "Parent Email",
+        "Parent Phone",
+        "Image",
+        "Grade",
+        "Section",
+        "Type of Payment"
+      ]
+    ];
+  }
 
-        // Add new student data to CSV
-        csvData.add([
-          studentModel.id.toString(),
-          studentModel.firstName,
-          studentModel.lastName,
-          studentModel.dateOfBirth,
-          studentModel.placeOfBirth,
-          studentModel.email,
-          studentModel.phone,
-          studentModel.address,
-          studentModel.parentName,
-          studentModel.parentAddress,
-          studentModel.parentEmail,
-          studentModel.parentPhone,
-          studentModel.image ?? "",
-          studentModel.grade,
-          studentModel.section,
-          studentModel.typeapid,
-        ]);
+  // Add new student data to CSV
+  csvData.add([
+    studentModel.id.toString(),
+    studentModel.firstName,
+    studentModel.lastName,
+    studentModel.dateOfBirth,
+    studentModel.placeOfBirth,
+    studentModel.email,
+    studentModel.phone,
+    studentModel.address,
+    studentModel.parentName,
+    studentModel.parentAddress,
+    studentModel.parentEmail,
+    studentModel.parentPhone,
+    studentModel.image ?? "",
+    studentModel.grade,
+    studentModel.section,
+    studentModel.typeapid,
+  ]);
 
-        // Convert to CSV string and save
-        String csvString = const ListToCsvConverter().convert(csvData);
-        await file.writeAsString(csvString);
+  // Convert to CSV string and save
+  String csvString = const ListToCsvConverter().convert(csvData);
+  await file.writeAsString(csvString);
 
-        debugPrint("Data saved to CSV successfully: $filePath");
-      } catch (e) {
-        debugPrint("Error saving CSV: $e");
-      }
-
+  debugPrint("Data saved to CSV successfully: $filePath");
+} catch (e) {
+  debugPrint("Error saving CSV: $e");
+}
       Get.find<NavigationControllerImp>().replaceLastWidget(NavigationEnum.Students);
     }
   }
