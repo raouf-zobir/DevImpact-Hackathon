@@ -19,28 +19,28 @@ class ScheduleDetailsModel {
 List<ScheduleDetailsModel> scheduleDetailsModel = [
   ScheduleDetailsModel(
     prefixColor: AppColors.primaryPurple,
-    title: "World History",
+    title: "Intelligence Artuficial",
     subtitle: "Class VII-B",
     date: "March 20, 2021",
     time: "09.00 - 10.00 AM",
   ),
   ScheduleDetailsModel(
     prefixColor: AppColors.accentOrange,
-    title: "Ancient History",
+    title: "cyber Security",
     subtitle: "Class VII-A",
     date: "March 20, 2021",
     time: "09.00 - 10.00 AM",
   ),
   ScheduleDetailsModel(
     prefixColor: AppColors.highlightYellow,
-    title: "Culture",
+    title: "Alogothim",
     subtitle: "Class VIII-A",
     date: "March 20, 2021",
     time: "09.00 - 10.00 AMq",
   ),
   ScheduleDetailsModel(
     prefixColor: AppColors.textBlack,
-    title: "World History",
+    title: "Algebra",
     subtitle: "Class VII-C",
     date: "March 20, 2021",
     time: "09.00 - 10.00 AMq",
