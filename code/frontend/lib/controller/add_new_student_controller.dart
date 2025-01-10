@@ -130,7 +130,6 @@ class AddNewStudentControllerImp extends AddNewStudentController {
 
         // Save to CSV
         try {
-          // final directory = await getApplicationDocumentsDirectory();
           const filePath =
               'C:/Users/Raouf/Desktop/Project/Students/students.csv';
 
@@ -168,25 +167,55 @@ class AddNewStudentControllerImp extends AddNewStudentController {
             ];
           }
 
-          // Add new student data to CSV
-          csvData.add([
-            studentModel.id.toString(),
-            studentModel.firstName,
-            studentModel.lastName,
-            studentModel.dateOfBirth,
-            studentModel.placeOfBirth,
-            studentModel.email,
-            studentModel.phone,
-            studentModel.address,
-            studentModel.parentName,
-            studentModel.parentAddress,
-            studentModel.parentEmail,
-            studentModel.parentPhone,
-            studentModel.image ?? "",
-            studentModel.grade,
-            studentModel.section,
-            studentModel.typeapid,
-          ]);
+          // Check if student ID already exists in CSV
+          bool idExists = false;
+          for (int i = 1; i < csvData.length; i++) {
+            if (csvData[i][0] == studentModel.id.toString()) {
+              // Replace existing row with new data
+              csvData[i] = [
+                studentModel.id.toString(),
+                studentModel.firstName,
+                studentModel.lastName,
+                studentModel.dateOfBirth,
+                studentModel.placeOfBirth,
+                studentModel.email,
+                studentModel.phone,
+                studentModel.address,
+                studentModel.parentName,
+                studentModel.parentAddress,
+                studentModel.parentEmail,
+                studentModel.parentPhone,
+                studentModel.image ?? "",
+                studentModel.grade,
+                studentModel.section,
+                studentModel.typeapid,
+              ];
+              idExists = true;
+              break;
+            }
+          }
+
+          if (!idExists) {
+            // Add new student data to CSV
+            csvData.add([
+              studentModel.id.toString(),
+              studentModel.firstName,
+              studentModel.lastName,
+              studentModel.dateOfBirth,
+              studentModel.placeOfBirth,
+              studentModel.email,
+              studentModel.phone,
+              studentModel.address,
+              studentModel.parentName,
+              studentModel.parentAddress,
+              studentModel.parentEmail,
+              studentModel.parentPhone,
+              studentModel.image ?? "",
+              studentModel.grade,
+              studentModel.section,
+              studentModel.typeapid,
+            ]);
+          }
 
           // Convert to CSV string and save
           String csvString = const ListToCsvConverter().convert(csvData);
