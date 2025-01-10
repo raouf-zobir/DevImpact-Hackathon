@@ -12,14 +12,13 @@ import 'package:mailer/smtp_server.dart';
 class EmailService {
   static const String _smtpHost = 'smtp.gmail.com';
   static const int _smtpPort = 587;
-  static const String _username = 'aotdevimpact@gmail.com';
+   static const String _username = 'aotdevimpact@gmail.com';
   static const String _password = 'vszx bbbx knal cxdy';
 
-  final String _studentsCsvPath =
-      'C:/Users/Raouf/Desktop/Project/Students/students.csv';
-  final String _teachersCsvPath =
-      'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
 
+  final String _studentsCsvPath = 'C:/Users/msi/Desktop/Project/Students/students.csv';
+  final String _teachersCsvPath = 'C:/Users/msi/Desktop/Project/Teachers/teachers.csv';
+  
   Map<String, List<List<dynamic>>> _cachedData = {};
 
   Future<void> _loadCsvData(String path, String type) async {
@@ -36,15 +35,13 @@ class EmailService {
 
   Future<List<String>> getEmailAddresses(String recipientType,
       {String? level}) async {
-    final normalizedRecipientType =
-        recipientType.replaceAll(' ', '').toLowerCase();
+    final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
 
     // Load appropriate CSV data based on recipient type
     if (normalizedRecipientType.contains('teachers')) {
       await _loadCsvData(_teachersCsvPath, 'teachers');
-      const emailIndex =
-          5; // Adjust this index based on your teachers.csv structure
+      const emailIndex = 5; // Adjust this index based on your teachers.csv structure
 
       for (var row in _cachedData['teachers']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
@@ -54,7 +51,9 @@ class EmailService {
           emailList.add(teacherEmail);
         }
       }
-    } else {
+    }
+
+    if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
       await _loadCsvData(_studentsCsvPath, 'students');
       const emailIndex = 5; // Student email column
       const parentEmailIndex = 10; // Parent email column
@@ -65,25 +64,15 @@ class EmailService {
         String? studentEmail = row[emailIndex]?.toString().trim();
         String? parentEmail = row[parentEmailIndex]?.toString().trim();
 
-        switch (normalizedRecipientType) {
-          case 'students':
-            if (studentEmail != null && studentEmail.isNotEmpty) {
-              emailList.add(studentEmail);
-            }
-            break;
-          case 'parents':
-            if (parentEmail != null && parentEmail.isNotEmpty) {
-              emailList.add(parentEmail);
-            }
-            break;
-          case 'both':
-            if (studentEmail != null && studentEmail.isNotEmpty) {
-              emailList.add(studentEmail);
-            }
-            if (parentEmail != null && parentEmail.isNotEmpty) {
-              emailList.add(parentEmail);
-            }
-            break;
+        if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('both')) {
+          if (studentEmail != null && studentEmail.isNotEmpty) {
+            emailList.add(studentEmail);
+          }
+        }
+        if (normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
+          if (parentEmail != null && parentEmail.isNotEmpty) {
+            emailList.add(parentEmail);
+          }
         }
       }
     }
@@ -92,7 +81,7 @@ class EmailService {
   }
 
   Future<void> sendEmail({
-    required String recipientType,
+    required List<String> recipientTypes,
     String? level,
     required String subject,
     required String body,
@@ -104,9 +93,14 @@ class EmailService {
       password: _password,
     );
 
-    final emailAddresses = await getEmailAddresses(recipientType, level: level);
+    final emailAddresses = <String>{};
+    for (var recipientType in recipientTypes) {
+      final addresses = await getEmailAddresses(recipientType, level: level);
+      emailAddresses.addAll(addresses);
+    }
+
     if (emailAddresses.isEmpty) {
-      throw Exception('No recipients found for type: $recipientType');
+      throw Exception('No recipients found for types: $recipientTypes');
     }
 
     print('Preparing to send email to ${emailAddresses.length} recipients');
@@ -133,19 +127,18 @@ class EmailService {
     final parts = recipients
         .replaceAll(' ', '')
         .toLowerCase()
-        .split('-')
+        .split(',')
         .map((e) => e.trim())
         .toList();
-    final type = parts[0];
-    return RecipientInfo(type: type, level: null);
+    return RecipientInfo(types: parts, level: null);
   }
 }
 
 class RecipientInfo {
-  final String type;
+  final List<String> types;
   final String? level;
 
-  RecipientInfo({required this.type, this.level});
+  RecipientInfo({required this.types, this.level});
 }
 
 class EmailData {
@@ -422,7 +415,7 @@ class _ChatBotState extends State<ChatBot> {
                           _emailData!.recipients);
 
                       await _emailService.sendEmail(
-                        recipientType: recipientInfo.type,
+                        recipientTypes: recipientInfo.types,
                         level: recipientInfo.level,
                         subject: _emailData!.title,
                         body: _emailData!.text,
