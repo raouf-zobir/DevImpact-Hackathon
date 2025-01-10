@@ -60,11 +60,12 @@ class AddNewStudentControllerImp extends AddNewStudentController {
   String? activeSection;
 
   Future<void> saveFileToLocal(XFile file) async {
-    file.saveTo("C:/Users/Ayman_Alkhatib/Desktop/${file.name}");
+    file.saveTo("C:/Users/Raouf/Desktop/${file.name}");
   }
 
   void pop() {
-    Get.find<NavigationControllerImp>().replaceLastWidget(NavigationEnum.Students);
+    Get.find<NavigationControllerImp>()
+        .replaceLastWidget(NavigationEnum.Students);
   }
 
   Future addNewStudent() async {
@@ -83,7 +84,10 @@ class AddNewStudentControllerImp extends AddNewStudentController {
               onPressed: () {
                 Get.find<NavigationControllerImp>()
                     .replaceLastWidget(NavigationEnum.Classes, info: {
-                  "isActive": (int.tryParse(grade.substring(grade.length - 2).trim()) ?? 1) - 1
+                  "isActive":
+                      (int.tryParse(grade.substring(grade.length - 2).trim()) ??
+                              1) -
+                          1
                 });
               },
             ),
@@ -118,7 +122,8 @@ class AddNewStudentControllerImp extends AddNewStudentController {
         } else {
           await box.add(studentModel);
         }
-        Get.find<NavigationControllerImp>().replaceLastWidget(NavigationEnum.Students);
+        Get.find<NavigationControllerImp>()
+            .replaceLastWidget(NavigationEnum.Students);
       }
     }
     Get.find<FinanceControllerImp>().resetController();
@@ -182,20 +187,21 @@ class AddNewStudentControllerImp extends AddNewStudentController {
   }
 
   void initListAndController() {
-    firstName = TextEditingController(text: student?.firstName ?? 'Ayman');
-    lastName = TextEditingController(text: student?.lastName ?? 'Smith');
-    dateOfBirth = TextEditingController(text: student?.dateOfBirth ?? '2000-01-01');
-    placeOfBirth = TextEditingController(text: student?.placeOfBirth ?? 'New York');
-    parentName = TextEditingController(text: student?.parentName ?? 'John Doe');
-    email = TextEditingController(text: student?.email ?? 'example@example.com');
-    phone = TextEditingController(text: student?.phone ?? '0968381111');
-    address = TextEditingController(text: student?.address ?? '123 Main St');
-    parentEmail = TextEditingController(text: student?.parentEmail ?? 'parent@example.com');
-    parentPhone = TextEditingController(text: student?.parentPhone ?? '0968381111');
-    parentAddress = TextEditingController(text: student?.parentAddress ?? '456 Elm St');
+    firstName = TextEditingController(text: student?.firstName);
+    lastName = TextEditingController(text: student?.lastName);
+    dateOfBirth = TextEditingController(text: student?.dateOfBirth);
+    placeOfBirth = TextEditingController(text: student?.placeOfBirth);
+    parentName = TextEditingController(text: student?.parentName);
+    email = TextEditingController(text: student?.email);
+    phone = TextEditingController(text: student?.phone);
+    address = TextEditingController(text: student?.address);
+    parentEmail = TextEditingController(text: student?.parentEmail);
+    parentPhone = TextEditingController(text: student?.parentPhone);
+    parentAddress = TextEditingController(text: student?.parentAddress);
 
-    image =
-        student?.image != null && student!.image!.isNotEmpty ? XFile(student!.image!) : null;
+    image = student?.image != null && student!.image!.isNotEmpty
+        ? XFile(student!.image!)
+        : null;
     grade = student?.grade ?? grade;
     activeSection = student?.section ?? activeSection;
 
@@ -207,18 +213,21 @@ class AddNewStudentControllerImp extends AddNewStudentController {
       }
     }
 
-    titleStudentColumn1 = ["First Name *", "Date & Place of Brith*", "Email *", "Address *"];
+    titleStudentColumn1 = [
+      "First Name *",
+      "Date & Place of Brith*",
+      "Email *",
+      "Address *"
+    ];
     titleStudentColumn2 = ["Last Name *", "Parent Name *", "Phone"];
     titleParentStudentColumn1 = ["First Name *", "Email *", "Address *"];
     titleParentStudentColumn2 = ["Last Name *", "Phone"];
 
     hintStudentColumn1 = [
       ["First Name"],
-      ["24 Februari 2005", "Damascus"],
+      ["ex: 2005-12-02", "ex: Rahmania"],
       ["Email"],
-      [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      ]
+      ["Rue des 1er Novembre, Villa 45 Rahmania, Wilaya of Algiers"]
     ];
     hintStudentColumn2 = [
       ["Last Name"],
@@ -228,9 +237,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
     hintParentStudentColumn1 = [
       ["First Name"],
       ["Email"],
-      [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      ]
+      ["Rue des 1er Novembre, Villa 45 Rahmania, Wilaya of Algiers"]
     ];
     hintParentStudentColumn2 = [
       ["Last Name"],

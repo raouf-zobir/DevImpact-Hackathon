@@ -35,7 +35,8 @@ class ClassesControllerImp extends ClassesController {
       return;
     }
     paginationIndex = newPaginationIndex;
-    paginationViewSection = activeSections.sublist(skip, min(activeSections.length, skip + spilt));
+    paginationViewSection =
+        activeSections.sublist(skip, min(activeSections.length, skip + spilt));
     update();
   }
 
@@ -63,7 +64,8 @@ class ClassesControllerImp extends ClassesController {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Confirm Deletion'),
-          content: const Text('Are you sure you want to delete this section and all associated students?'),
+          content: const Text(
+              'Are you sure you want to delete this section and all associated students?'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
@@ -82,7 +84,8 @@ class ClassesControllerImp extends ClassesController {
       },
     );
 
-    if (activeSections.isEmpty || confirmDelete == null || !confirmDelete) return;
+    if (activeSections.isEmpty || confirmDelete == null || !confirmDelete)
+      return;
 
     List<SectionModel> sectionsToDelete = allSections
         .whereType<SectionModel>()
@@ -98,7 +101,8 @@ class ClassesControllerImp extends ClassesController {
       List<int> listRemoveIndexSections = [];
 
       for (var i = 0; i < items.length; i++) {
-        if (items[i] is SectionModel && items[i].grade == sectionToDelete.grade) {
+        if (items[i] is SectionModel &&
+            items[i].grade == sectionToDelete.grade) {
           index = i;
         }
       }

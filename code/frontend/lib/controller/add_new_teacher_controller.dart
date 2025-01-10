@@ -125,24 +125,20 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
 
   @override
   void onInit() async {
-    firstName = TextEditingController(text: teacher?.firstName ?? "Ayman");
-    lastName = TextEditingController(text: teacher?.lastName ?? "Smith");
-    dateOfBirth =
-        TextEditingController(text: teacher?.dateOfBirth ?? "1990-01-01");
-    placeOfBirth = TextEditingController(text: teacher?.placeOfBirth ?? "City");
-    email =
-        TextEditingController(text: teacher?.email ?? "example@example.com");
-    phone = TextEditingController(text: teacher?.phone ?? "123-456-7890");
-    address =
-        TextEditingController(text: teacher?.address ?? "123 Main Street");
-    university = TextEditingController(
-        text: teacher?.university ?? "Example University");
-    degree = TextEditingController(text: teacher?.degree ?? "Bachelor's");
-    startDate = TextEditingController(text: teacher?.startDate ?? "2010-09-01");
-    endDate = TextEditingController(text: teacher?.endDate ?? "2014-06-01");
-    city = TextEditingController(text: teacher?.city ?? "New York");
-    about = TextEditingController(text: teacher?.about ?? "No thing");
-    expiration = TextEditingController(text: teacher?.expiration ?? "No thing");
+    firstName = TextEditingController(text: teacher?.firstName);
+    lastName = TextEditingController(text: teacher?.lastName);
+    dateOfBirth = TextEditingController(text: teacher?.dateOfBirth);
+    placeOfBirth = TextEditingController(text: teacher?.placeOfBirth);
+    email = TextEditingController(text: teacher?.email);
+    phone = TextEditingController(text: teacher?.phone);
+    address = TextEditingController(text: teacher?.address);
+    university = TextEditingController(text: teacher?.university);
+    degree = TextEditingController(text: teacher?.degree);
+    startDate = TextEditingController(text: teacher?.startDate);
+    endDate = TextEditingController(text: teacher?.endDate);
+    city = TextEditingController(text: teacher?.city);
+    about = TextEditingController(text: teacher?.about);
+    expiration = TextEditingController(text: teacher?.expiration);
 
     image = teacher?.image != null && teacher!.image!.isNotEmpty
         ? XFile(teacher!.image!)
@@ -161,22 +157,20 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
     hintTeacherColumn1 = [
       ["First Name"],
       ["Email"],
-      [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      ],
-      ["24 Februari 1997"]
+      ["Rue des 1er Novembre, Villa 45 Rahmania, Wilaya of Algiers"],
+      ["ex: 2005-12-02"]
     ];
     hintTeacherColumn2 = [
       ["Last Name"],
-      ["+963912345678"],
+      ["Phone"],
     ];
     hintEducationTeacherColumn1 = [
-      ["University Akademi Historia"],
+      ["University USTHB Algiers"],
       ["September 2013", "September 2017"],
     ];
     hintEducationTeacherColumn2 = [
       ["History Major"],
-      ["Yogyakarta, Indonesia"],
+      ["Yassir Algiers"],
     ];
 
     validationTeacherColumn1 = [
@@ -217,7 +211,7 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
       [city],
     ];
 
-    box =   MyAppServices().box;
+    box = MyAppServices().box;
 
     super.onInit();
   }
