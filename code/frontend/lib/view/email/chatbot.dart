@@ -12,12 +12,14 @@ import 'package:mailer/smtp_server.dart';
 class EmailService {
   static const String _smtpHost = 'smtp.gmail.com';
   static const int _smtpPort = 587;
-  static const String _username = 'hanini.firebase@gmail.com';
-  static const String _password = 'bxah jsut ugqb ezae';
+  static const String _username = 'aotdevimpact@gmail.com';
+  static const String _password = 'vszx bbbx knal cxdy';
 
-  final String _studentsCsvPath = 'C:/Users/Raouf/Desktop/Project/Students/students.csv';
-  final String _teachersCsvPath = 'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
-  
+  final String _studentsCsvPath =
+      'C:/Users/Raouf/Desktop/Project/Students/students.csv';
+  final String _teachersCsvPath =
+      'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
+
   Map<String, List<List<dynamic>>> _cachedData = {};
 
   Future<void> _loadCsvData(String path, String type) async {
@@ -34,13 +36,15 @@ class EmailService {
 
   Future<List<String>> getEmailAddresses(String recipientType,
       {String? level}) async {
-    final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
+    final normalizedRecipientType =
+        recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
 
     // Load appropriate CSV data based on recipient type
     if (normalizedRecipientType.contains('teachers')) {
       await _loadCsvData(_teachersCsvPath, 'teachers');
-      const emailIndex = 5; // Adjust this index based on your teachers.csv structure
+      const emailIndex =
+          5; // Adjust this index based on your teachers.csv structure
 
       for (var row in _cachedData['teachers']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
