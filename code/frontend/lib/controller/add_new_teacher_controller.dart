@@ -54,8 +54,8 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
   AddNewTeacherControllerImp({this.teacher});
 
   Future<void> saveFileToLocal(XFile file) async {
-    file.saveTo("C:/Users/Raouf/Desktop/test/${file.name}");
- // file.saveTo("C:/Users/Raouf/Desktop/test/${file.name}");
+    file.saveTo(
+        "C:/Users/Raouf/Desktop/Project/Teachers/TeachersPhoto/${file.name}");
   }
 
   Future addNewTeacher() async {
