@@ -54,48 +54,45 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
   AddNewTeacherControllerImp({this.teacher});
 
   Future<void> saveFileToLocal(XFile file) async {
-    file.saveTo("C:/Users/Ayman_Alkhatib/Desktop/${file.name}");
+    file.saveTo("C:/Users/Raouf/Desktop/test/${file.name}");
+ // file.saveTo("C:/Users/Raouf/Desktop/test/${file.name}");
   }
 
   Future addNewTeacher() async {
-    // if (key.currentState!.validate()) {
+    if (key.currentState!.validate()) {
+      TeacherModel teacherModel = TeacherModel(
+        id: teacher?.id ?? generateUniqueNumber(),
+        firstName: firstName.text,
+        lastName: lastName.text,
+        dateOfBirth: dateOfBirth.text,
+        placeOfBirth: placeOfBirth.text,
+        email: email.text,
+        phone: phone.text,
+        address: address.text,
+        university: university.text,
+        degree: degree.text,
+        startDate: startDate.text,
+        endDate: endDate.text,
+        city: city.text,
+        about: about.text,
+        expiration: expiration.text,
+        image: image?.path,
+      );
 
-    TeacherModel teacherModel = TeacherModel(
-      id: teacher?.id ?? generateUniqueNumber(),
-      firstName: firstName.text,
-      lastName: lastName.text,
-      dateOfBirth: dateOfBirth.text,
-      placeOfBirth: placeOfBirth.text,
-      email: email.text,
-      phone: phone.text,
-      address: address.text,
-      university: university.text,
-      degree: degree.text,
-      startDate: startDate.text,
-      endDate: endDate.text,
-      city: city.text,
-      about: about.text,
-      expiration: expiration.text,
-      image: image?.path,
-    );
-
-    if (teacher != null) {
-      final items = box.values.toList();
-      for (int i = 0; i < items.length; i++) {
-        if (items[i] is TeacherModel && items[i].id == teacher!.id) {
-          await box.putAt(i, teacherModel);
+      if (teacher != null) {
+        final items = box.values.toList();
+        for (int i = 0; i < items.length; i++) {
+          if (items[i] is TeacherModel && items[i].id == teacher!.id) {
+            await box.putAt(i, teacherModel);
+          }
         }
+      } else {
+        await box.add(teacherModel);
       }
-    } else {
-      await box.add(teacherModel);
+
+      Get.find<NavigationControllerImp>()
+          .replaceLastWidget(NavigationEnum.Teachers);
     }
-
-    Get.find<NavigationControllerImp>()
-        .replaceLastWidget(NavigationEnum.Teachers);
-
-    // await box.clear();
-    // print(box.values.whereType<StudentModel>());
-    // }
   }
 
   void pickImage() async {
@@ -166,11 +163,11 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
     ];
     hintEducationTeacherColumn1 = [
       ["University USTHB Algiers"],
-      ["September 2013", "September 2017"],
+      ["ex: 2013-10-03", "ex: 2017-10-03"],
     ];
     hintEducationTeacherColumn2 = [
       ["History Major"],
-      ["Yassir Algiers"],
+      ["Douera,Algier"],
     ];
 
     validationTeacherColumn1 = [
@@ -189,7 +186,7 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
     ];
     validationEducationTeacherColumn2 = [
       [Validation.length],
-      [Validation.isPhoneNumberValid],
+      [Validation.length],
     ];
 
     textControllerTeacherColumn1 = [

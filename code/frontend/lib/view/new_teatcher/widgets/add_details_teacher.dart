@@ -63,7 +63,7 @@ class AddDetailsTeacher extends GetView<AddNewTeacherControllerImp> {
                       ], title: [
                         "Place of Birth *"
                       ], hint: [
-                        ["Jakarta, Indonesia"],
+                        ["Costantine, Algeria"],
                       ]),
                     ],
                   ),
@@ -111,7 +111,7 @@ class AddDetailsTeacher extends GetView<AddNewTeacherControllerImp> {
                       ],
                       title: const ["Expiration"],
                       hint: const [
-                        ["Jakarta, Indonesia"],
+                        ["Costantine, Algeria"],
                       ]),
                 ),
                 const Expanded(

@@ -60,7 +60,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
   String? activeSection;
 
   Future<void> saveFileToLocal(XFile file) async {
-    file.saveTo("C:/Users/Raouf/Desktop/${file.name}");
+    file.saveTo("C:/Users/Raouf/Desktop/test/${file.name}");
   }
 
   void pop() {
