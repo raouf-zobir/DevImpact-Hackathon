@@ -12,13 +12,14 @@ import 'package:mailer/smtp_server.dart';
 class EmailService {
   static const String _smtpHost = 'smtp.gmail.com';
   static const int _smtpPort = 587;
-   static const String _username = 'aotdevimpact@gmail.com';
+  static const String _username = 'aotdevimpact@gmail.com';
   static const String _password = 'vszx bbbx knal cxdy';
 
+  final String _studentsCsvPath =
+      'C:/Users/Raouf/Desktop/Project/Students/students.csv';
+  final String _teachersCsvPath =
+      'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
 
-  final String _studentsCsvPath = 'C:/Users/msi/Desktop/Project/Students/students.csv';
-  final String _teachersCsvPath = 'C:/Users/msi/Desktop/Project/Teachers/teachers.csv';
-  
   Map<String, List<List<dynamic>>> _cachedData = {};
 
   Future<void> _loadCsvData(String path, String type) async {
@@ -35,13 +36,15 @@ class EmailService {
 
   Future<List<String>> getEmailAddresses(String recipientType,
       {String? level}) async {
-    final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
+    final normalizedRecipientType =
+        recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
 
     // Load appropriate CSV data based on recipient type
     if (normalizedRecipientType.contains('teachers')) {
       await _loadCsvData(_teachersCsvPath, 'teachers');
-      const emailIndex = 5; // Adjust this index based on your teachers.csv structure
+      const emailIndex =
+          5; // Adjust this index based on your teachers.csv structure
 
       for (var row in _cachedData['teachers']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
@@ -53,7 +56,9 @@ class EmailService {
       }
     }
 
-    if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
+    if (normalizedRecipientType.contains('students') ||
+        normalizedRecipientType.contains('parents') ||
+        normalizedRecipientType.contains('both')) {
       await _loadCsvData(_studentsCsvPath, 'students');
       const emailIndex = 5; // Student email column
       const parentEmailIndex = 10; // Parent email column
@@ -64,12 +69,14 @@ class EmailService {
         String? studentEmail = row[emailIndex]?.toString().trim();
         String? parentEmail = row[parentEmailIndex]?.toString().trim();
 
-        if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('both')) {
+        if (normalizedRecipientType.contains('students') ||
+            normalizedRecipientType.contains('both')) {
           if (studentEmail != null && studentEmail.isNotEmpty) {
             emailList.add(studentEmail);
           }
         }
-        if (normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
+        if (normalizedRecipientType.contains('parents') ||
+            normalizedRecipientType.contains('both')) {
           if (parentEmail != null && parentEmail.isNotEmpty) {
             emailList.add(parentEmail);
           }

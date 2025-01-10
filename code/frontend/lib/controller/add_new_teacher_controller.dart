@@ -57,7 +57,7 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
 
   Future<void> saveFileToLocal(XFile file) async {
     file.saveTo(
-        "C:/Users/msi/Desktop/Project/Teachers/TeachersPhoto/${file.name}");
+        "C:/Users/Raouf/Desktop/Project/Teachers/TeachersPhoto/${file.name}");
   }
 
   Future addNewTeacher() async {
@@ -94,7 +94,7 @@ class AddNewTeacherControllerImp extends AddNewTeacherController {
 
       // Save to CSV
       try {
-        const filePath = 'C:/Users/msi/Desktop/Project/Teachers/teachers.csv';
+        const filePath = 'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
 
         File file = File(filePath);
         List<List<String>> csvData;

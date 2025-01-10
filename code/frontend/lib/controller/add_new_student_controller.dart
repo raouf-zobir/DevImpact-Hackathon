@@ -63,7 +63,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
 
   Future<void> saveFileToLocal(XFile file) async {
     file.saveTo(
-        "C:/Users/msi/Desktop/Project/Students/StudentsPhoto/${file.name}");
+        "C:/Users/Raouf/Desktop/Project/Students/StudentsPhoto/${file.name}");
   }
 
   void pop() {
@@ -132,7 +132,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
         try {
           // final directory = await getApplicationDocumentsDirectory();
           const filePath =
-              'C:/Users/msi/Desktop/Project/Students/students.csv';
+              'C:/Users/Raouf/Desktop/Project/Students/students.csv';
 
           File file = File(filePath);
           List<List<String>> csvData;
@@ -236,7 +236,7 @@ class AddNewStudentControllerImp extends AddNewStudentController {
     grade = value;
     // Extract grade number (1, 2, or 3) from the grade string
     String gradeNumber = value.split(' ')[1];
-    
+
     sections = box.values.whereType<SectionModel>().where((section) {
       // Compare just the grade number part
       return section.grade == "Grade $gradeNumber";
