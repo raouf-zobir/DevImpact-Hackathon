@@ -222,6 +222,25 @@ class EmailData {
   }
 }
 
+// Update the PromptHistory class
+class PromptHistory {
+  final String prompt;
+  final String response;
+  final DateTime timestamp;
+  final bool wasSent;
+  final String recipients;
+  final String? error;
+
+  PromptHistory({
+    required this.prompt,
+    required this.response,
+    required this.timestamp,
+    this.wasSent = false,
+    this.recipients = '',
+    this.error,
+  });
+}
+
 class ChatBot extends StatefulWidget {
   const ChatBot({Key? key}) : super(key: key);
 
@@ -235,6 +254,7 @@ class _ChatBotState extends State<ChatBot> {
   bool _isLoading = false;
   bool _showEmailPreview = false;
   final EmailService _emailService = EmailService();
+  final List<PromptHistory> _promptHistory = [];
 
   final GeminiAPIService _geminiAPIService =
       GeminiAPIService(apiKey: ApiConstants.apiKey);
@@ -328,6 +348,12 @@ class _ChatBotState extends State<ChatBot> {
           .generateContent(prompt + _inputController.text);
 
       if (responseText != null) {
+        _promptHistory.add(PromptHistory(
+          prompt: _inputController.text,
+          response: responseText,
+          timestamp: DateTime.now(),
+        ));
+        
         setState(() {
           _emailData = EmailData.fromResponse(responseText);
           _showEmailPreview = true;
@@ -345,6 +371,174 @@ class _ChatBotState extends State<ChatBot> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  // Update the send email logic
+  Future<void> _sendEmail() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      final recipientInfo = EmailService.parseRecipientString(
+          _emailData!.recipients);
+      
+      await _emailService.sendEmail(
+        recipientType: recipientInfo.type,
+        level: recipientInfo.level,
+        subject: _emailData!.title,
+        body: _emailData!.text,
+      );
+      
+      // Update the last history entry with success status
+      if (_promptHistory.isNotEmpty) {
+        final lastIndex = _promptHistory.length - 1;
+        _promptHistory[lastIndex] = PromptHistory(
+          prompt: _promptHistory[lastIndex].prompt,
+          response: _promptHistory[lastIndex].response,
+          timestamp: _promptHistory[lastIndex].timestamp,
+          wasSent: true,
+          recipients: _emailData!.recipients,
+        );
+      }
+      
+      Get.snackbar(
+        'Success',
+        'Email sent successfully!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      _resetState();
+    } catch (e) {
+      // Update the last history entry with error status
+      if (_promptHistory.isNotEmpty) {
+        final lastIndex = _promptHistory.length - 1;
+        _promptHistory[lastIndex] = PromptHistory(
+          prompt: _promptHistory[lastIndex].prompt,
+          response: _promptHistory[lastIndex].response,
+          timestamp: _promptHistory[lastIndex].timestamp,
+          wasSent: false,
+          recipients: _emailData!.recipients,
+          error: e.toString(),
+        );
+      }
+      
+      Get.snackbar(
+        'Error',
+        'Failed to send email: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showHistoryDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.7,
+          height: MediaQuery.of(context).size.height * 0.8,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Email History',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: Colors.blue.shade700),
+                  ),
+                ],
+              ),
+              const Divider(),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _promptHistory.length,
+                  itemBuilder: (context, index) {
+                    final history = _promptHistory[_promptHistory.length - 1 - index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ExpansionTile(
+                        leading: Icon(
+                          history.wasSent ? Icons.check_circle : Icons.error,
+                          color: history.wasSent ? Colors.green : Colors.red,
+                        ),
+                        title: Text(
+                          history.prompt,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Generated on: ${history.timestamp.toString().split('.')[0]}',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                            if (history.recipients.isNotEmpty)
+                              Text(
+                                'Recipients: ${history.recipients}',
+                                style: TextStyle(
+                                  color: Colors.blue.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                          ],
+                        ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Response:',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(history.response),
+                                if (history.error != null) ...[
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Error: ${history.error}',
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildInputSection() {
@@ -415,40 +609,7 @@ class _ChatBotState extends State<ChatBot> {
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton(
-                  onPressed: () async {
-                    try {
-                      setState(() => _isLoading = true);
-
-                      final recipientInfo = EmailService.parseRecipientString(
-                          _emailData!.recipients);
-
-                      await _emailService.sendEmail(
-                        recipientType: recipientInfo.type,
-                        level: recipientInfo.level,
-                        subject: _emailData!.title,
-                        body: _emailData!.text,
-                      );
-
-                      Get.snackbar(
-                        'Success',
-                        'Email sent successfully!',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.green,
-                        colorText: Colors.white,
-                      );
-                      _resetState();
-                    } catch (e) {
-                      Get.snackbar(
-                        'Error',
-                        'Failed to send email: $e',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.red,
-                        colorText: Colors.white,
-                      );
-                    } finally {
-                      setState(() => _isLoading = false);
-                    }
-                  },
+                  onPressed: _isLoading ? null : _sendEmail,
                   child: _isLoading
                       ? const SizedBox(
                           width: 20,
@@ -472,91 +633,37 @@ class _ChatBotState extends State<ChatBot> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          children: [
-            const HeaderWithSearch(
-              title: "Email Assistant",
-              showSearch: false,
-            ),
-            const SizedBox(height: 28),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.blue.shade50,
-                      Colors.white,
-                      Colors.white,
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              children: [
+                const HeaderWithSearch(
+                  title: "Email Assistant",
+                  showSearch: false,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (!_showEmailPreview)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(25),
-                            border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.blue.withOpacity(0.1),
-                                spreadRadius: 5,
-                                blurRadius: 15,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            children: [
-                              TextField(
-                                controller: _inputController,
-                                decoration: InputDecoration(
-                                  labelText: 'Enter your request',
-                                  labelStyle: TextStyle(color: Colors.blue.shade400),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                    borderSide: BorderSide(color: Colors.blue.shade400),
-                                  ),
-                                  hintText: 'e.g., Notify all students about school closure tomorrow due to a water leak',
-                                ),
-                                maxLines: 3,
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _isLoading ? null : _sendMessage,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade400,
-                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                ),
-                                child: _isLoading
-                                    ? const CircularProgressIndicator(color: Colors.white)
-                                    : const Text(
-                                        'Generate Email',
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (_showEmailPreview)
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Container(
+                const SizedBox(height: 28),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.blue.shade50,
+                          Colors.white,
+                          Colors.white,
+                        ],
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (!_showEmailPreview)
+                            Container(
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(25),
@@ -572,105 +679,152 @@ class _ChatBotState extends State<ChatBot> {
                               ),
                               padding: const EdgeInsets.all(20),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    _emailData!.title,
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'To: ${_emailData!.recipients}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.blue.shade400,
-                                    ),
-                                  ),
-                                  Divider(color: Colors.blue.shade100, height: 24),
-                                  Text(
-                                    _emailData!.text,
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      TextButton(
-                                        onPressed: _resetState,
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Colors.red.shade400,
-                                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                        ),
-                                        child: const Text('Reject'),
+                                  TextField(
+                                    controller: _inputController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Enter your request',
+                                      labelStyle: TextStyle(color: Colors.blue.shade400),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
                                       ),
-                                      const SizedBox(width: 16),
-                                      ElevatedButton(
-                                        onPressed: _isLoading ? null : () async {
-                                          try {
-                                            setState(() => _isLoading = true);
-                                            
-                                            final recipientInfo = EmailService.parseRecipientString(
-                                                _emailData!.recipients);
-                                            
-                                            await _emailService.sendEmail(
-                                              recipientType: recipientInfo.type,
-                                              level: recipientInfo.level,
-                                              subject: _emailData!.title,
-                                              body: _emailData!.text,
-                                            );
-                                            
-                                            Get.snackbar(
-                                              'Success',
-                                              'Email sent successfully!',
-                                              snackPosition: SnackPosition.BOTTOM,
-                                              backgroundColor: Colors.green,
-                                              colorText: Colors.white,
-                                            );
-                                            _resetState();
-                                          } catch (e) {
-                                            Get.snackbar(
-                                              'Error',
-                                              'Failed to send email: $e',
-                                              snackPosition: SnackPosition.BOTTOM,
-                                              backgroundColor: Colors.red,
-                                              colorText: Colors.white,
-                                            );
-                                          } finally {
-                                            setState(() => _isLoading = false);
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green.shade400,
-                                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(15),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide(color: Colors.blue.shade400),
+                                      ),
+                                      hintText: 'e.g., Notify all students about school closure tomorrow due to a water leak',
+                                    ),
+                                    maxLines: 3,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _isLoading ? null : _sendMessage,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue.shade400,
+                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                    ),
+                                    child: _isLoading
+                                        ? const CircularProgressIndicator(color: Colors.white)
+                                        : const Text(
+                                            'Generate Email',
+                                            style: TextStyle(fontSize: 16),
                                           ),
-                                        ),
-                                        child: _isLoading
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child: CircularProgressIndicator(color: Colors.white),
-                                              )
-                                            : const Text('Send Email'),
-                                      ),
-                                    ],
                                   ),
                                 ],
                               ),
                             ),
-                          ),
-                        ),
-                    ],
+                          if (_showEmailPreview)
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(25),
+                                    border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.blue.withOpacity(0.1),
+                                        spreadRadius: 5,
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 5),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _emailData!.title,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'To: ${_emailData!.recipients}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.blue.shade400,
+                                        ),
+                                      ),
+                                      Divider(color: Colors.blue.shade100, height: 24),
+                                      Text(
+                                        _emailData!.text,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          TextButton(
+                                            onPressed: _resetState,
+                                            style: TextButton.styleFrom(
+                                              foregroundColor: Colors.red.shade400,
+                                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                            ),
+                                            child: const Text('Reject'),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          ElevatedButton(
+                                            onPressed: _isLoading ? null : _sendEmail,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green.shade400,
+                                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(15),
+                                              ),
+                                            ),
+                                            child: _isLoading
+                                                ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(color: Colors.white),
+                                                  )
+                                                : const Text('Send Email'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            right: 40,
+            bottom: 40,
+            child: FloatingActionButton.extended(
+              onPressed: _showHistoryDialog,
+              backgroundColor: Colors.blue.shade700,
+              icon: const Icon(
+                Icons.history,
+                color: Colors.white,
+                size: 32,
+              ),
+              label: const Text(
+                'History',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              elevation: 4,
+            ),
+          ),
+        ],
       ),
     );
   }
