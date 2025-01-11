@@ -44,8 +44,8 @@ List<DrawerItemModel> drawerItem = [
   // DrawerItemModel(title: 'Chat', icon: Assets.iconsChat, NavigationEnum.NewStudent),
   // DrawerItemModel(title: 'Lastest Activity', icon: Assets.iconsActivity, NavigationEnum.Lastest),
   DrawerItemModel(
-    title: "Absence",
+    title: "Apsence",
     icon: Assets.iconsCalendar,
-    destination: NavigationEnum.Absence,
+    destination: NavigationEnum.Apsence,
   ),
 ];
