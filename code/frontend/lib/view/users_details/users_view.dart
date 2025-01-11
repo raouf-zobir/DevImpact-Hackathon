@@ -20,7 +20,7 @@ class Users extends StatelessWidget {
             imageDefault: Assets.imagesUserDefault,
             informations: itemCardUserModel,
             mask: Assets.imagesMasking,
-            name: "Nabila Azalea",
+            name: "Hamzaoui Nadir",
           ),
           const SizedBox(height: 40),
           const Spacer(),

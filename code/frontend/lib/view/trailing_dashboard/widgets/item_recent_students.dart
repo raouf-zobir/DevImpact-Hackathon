@@ -46,11 +46,11 @@ class _ItemRecentStudentsState extends State<ItemRecentStudents> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Samantha William",
+              "Zobir Raouf",
               style: AppFontStyle.styleSemiBold15_5(context),
             ),
             Text(
-              "Class VII A",
+              "Class IA Group 1",
               style: AppFontStyle.styleRegular14(context).copyWith(
                 color: AppColors.darkGray,
               ),

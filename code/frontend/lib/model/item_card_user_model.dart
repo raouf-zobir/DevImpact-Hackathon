@@ -11,12 +11,12 @@ class ItemCardUserModel {
 
 List<ItemCardUserModel> itemCardUserModel = [
   ItemCardUserModel(
-      title: "Location", icon: Assets.iconsLocation, body: "Damascuse,Arbin"),
+      title: "Location", icon: Assets.iconsLocation, body: "Rahmania,Algiers"),
   // ItemCardUserModel(title: "Location", icon: Assets.iconsLocation, body: "Damascuse,Arbin"),
   ItemCardUserModel(
-      title: "Phone", icon: Assets.iconsCall, body: "+9630968381111"),
+      title: "Phone", icon: Assets.iconsCall, body: "+213 555 555 555"),
   ItemCardUserModel(
-      title: "Email", icon: Assets.iconsEmail, body: "ayman@gmail.com"),
+      title: "Email", icon: Assets.iconsEmail, body: "admin@edu-platform.net"),
 ];
 
 retListItemCardUserModel({

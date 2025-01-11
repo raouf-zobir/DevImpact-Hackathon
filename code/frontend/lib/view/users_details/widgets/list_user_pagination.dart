@@ -26,7 +26,7 @@ class ListUserPagination extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            "You have 741 user",
+            "You have 256 user",
             style: AppFontStyle.styleRegular16(context)
                 .copyWith(color: AppColors.darkGray),
           ),
