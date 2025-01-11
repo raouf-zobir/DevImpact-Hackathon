@@ -29,10 +29,6 @@
 
 
 
-## **Note:** 🛠️  
-*The School Management App is currently under development. A preliminary version has not been released yet. The app will be completed and available for use when development is finalized.*
-
-
 ## Application Screenshots 📸
 
 <div style="text-align: center;">
