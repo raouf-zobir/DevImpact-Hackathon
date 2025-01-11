@@ -803,8 +803,8 @@ class _ChatBotState extends State<ChatBot> {
             ),
           ),
           Positioned(
-            right: 40,
-            bottom: 40,
+            right: 60,  // Increased from 40
+            bottom: 60, // Increased from 40
             child: FloatingActionButton.extended(
               onPressed: _showHistoryDialog,
               backgroundColor: Colors.blue.shade700,
