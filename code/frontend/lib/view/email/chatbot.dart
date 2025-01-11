@@ -126,6 +126,8 @@ class EmailService {
     );
 
     final emailAddresses = <String>{};
+    
+    // Process each recipient type separately
     for (var recipientType in recipientTypes) {
       final addresses = await getEmailAddresses(recipientType, level: level);
       emailAddresses.addAll(addresses);
@@ -145,7 +147,7 @@ class EmailService {
         ..text = body;
 
       try {
-        final sendReport = await send(message, smtpServer);
+        await send(message, smtpServer);
         print('Email sent successfully to $email');
       } catch (e) {
         print('Failed to send email to $email: $e');
@@ -156,16 +158,35 @@ class EmailService {
   }
 
   static RecipientInfo parseRecipientString(String recipients) {
-    final parts = recipients.split(',').map((e) => e.trim()).toList();
+    final parts = recipients.toLowerCase().split(',').map((e) => e.trim()).toList();
     String? level;
     List<String> types = [];
 
+    // First pass: extract grade information
     for (var part in parts) {
-      // Check for grade/level information
-      if (part.toLowerCase().contains('grade') || RegExp(r'g\d+').hasMatch(part.toLowerCase())) {
-        level = part.trim();
-      } else {
-        types.add(part.replaceAll(' ', '').toLowerCase());
+      if (part.contains('grade') || RegExp(r'g\d+').hasMatch(part)) {
+        // Extract grade number and standardize format
+        final gradeMatch = RegExp(r'grade\s*(\d+)|g(\d+)').firstMatch(part);
+        if (gradeMatch != null) {
+          final gradeNum = gradeMatch.group(1) ?? gradeMatch.group(2);
+          level = 'grade$gradeNum';
+        }
+      }
+    }
+
+    // Second pass: handle recipient types
+    for (var part in parts) {
+      if (part.contains('teachers')) {
+        types.add('teachers');
+      } 
+      if (part.contains('students')) {
+        types.add('students');
+      }
+      if (part.contains('parents')) {
+        types.add('parents');
+      }
+      if (part.contains('both')) {
+        types.addAll(['students', 'parents']);
       }
     }
 
@@ -174,7 +195,7 @@ class EmailService {
       types.add('students'); // Default to 'students' if no specific type is found
     }
 
-    return RecipientInfo(types: types, level: level);
+    return RecipientInfo(types: types.toSet().toList(), level: level);
   }
 }
 
