@@ -12,14 +12,37 @@ import 'package:mailer/smtp_server.dart';
 class EmailService {
   static const String _smtpHost = 'smtp.gmail.com';
   static const int _smtpPort = 587;
-   static const String _username = 'aotdevimpact@gmail.com';
+  static const String _username = 'aotdevimpact@gmail.com';
   static const String _password = 'vszx bbbx knal cxdy';
-
 
   final String _studentsCsvPath = 'C:/Users/msi/Desktop/Project/Students/students.csv';
   final String _teachersCsvPath = 'C:/Users/msi/Desktop/Project/Teachers/teachers.csv';
   
   Map<String, List<List<dynamic>>> _cachedData = {};
+
+  // Helper method to extract and normalize grade information
+  String? _normalizeGrade(String? gradeText) {
+    if (gradeText == null) return null;
+    
+    // Remove whitespace and convert to lowercase
+    final normalized = gradeText.toLowerCase().replaceAll(' ', '');
+    
+    // Handle various grade formats
+    final gradePatterns = {
+      RegExp(r'grade(\d+)'): (Match m) => 'grade${m.group(1)}',
+      RegExp(r'g(\d+)'): (Match m) => 'grade${m.group(1)}',
+      RegExp(r'^(\d+)(st|nd|rd|th)?grade'): (Match m) => 'grade${m.group(1)}',
+      RegExp(r'^(\d+)(st|nd|rd|th)?$'): (Match m) => 'grade${m.group(1)}',
+    };
+
+    for (var pattern in gradePatterns.keys) {
+      if (pattern.hasMatch(normalized)) {
+        return gradePatterns[pattern]!(pattern.firstMatch(normalized)!);
+      }
+    }
+
+    return null;
+  }
 
   Future<void> _loadCsvData(String path, String type) async {
     if (!_cachedData.containsKey(type)) {
@@ -33,10 +56,10 @@ class EmailService {
     }
   }
 
-  Future<List<String>> getEmailAddresses(String recipientType,
-      {String? level}) async {
+  Future<List<String>> getEmailAddresses(String recipientType, {String? level}) async {
     final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
+    final normalizedLevel = _normalizeGrade(level);
 
     // Load appropriate CSV data based on recipient type
     if (normalizedRecipientType.contains('teachers')) {
@@ -53,13 +76,22 @@ class EmailService {
       }
     }
 
-    if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
+    if (normalizedRecipientType.contains('students') || 
+        normalizedRecipientType.contains('parents') || 
+        normalizedRecipientType.contains('both')) {
       await _loadCsvData(_studentsCsvPath, 'students');
       const emailIndex = 5; // Student email column
       const parentEmailIndex = 10; // Parent email column
+      const gradeIndex = 13; // Grade column index
 
       for (var row in _cachedData['students']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
+
+        // Check grade if level is specified
+        if (normalizedLevel != null) {
+          String studentGrade = _normalizeGrade(row[gradeIndex]?.toString()) ?? '';
+          if (studentGrade != normalizedLevel) continue;
+        }
 
         String? studentEmail = row[emailIndex]?.toString().trim();
         String? parentEmail = row[parentEmailIndex]?.toString().trim();
@@ -100,7 +132,7 @@ class EmailService {
     }
 
     if (emailAddresses.isEmpty) {
-      throw Exception('No recipients found for types: $recipientTypes');
+      throw Exception('No recipients found for types: $recipientTypes${level != null ? ' in grade $level' : ''}');
     }
 
     print('Preparing to send email to ${emailAddresses.length} recipients');
@@ -124,13 +156,25 @@ class EmailService {
   }
 
   static RecipientInfo parseRecipientString(String recipients) {
-    final parts = recipients
-        .replaceAll(' ', '')
-        .toLowerCase()
-        .split(',')
-        .map((e) => e.trim())
-        .toList();
-    return RecipientInfo(types: parts, level: null);
+    final parts = recipients.split(',').map((e) => e.trim()).toList();
+    String? level;
+    List<String> types = [];
+
+    for (var part in parts) {
+      // Check for grade/level information
+      if (part.toLowerCase().contains('grade') || RegExp(r'g\d+').hasMatch(part.toLowerCase())) {
+        level = part.trim();
+      } else {
+        types.add(part.replaceAll(' ', '').toLowerCase());
+      }
+    }
+
+    // Ensure types list is not empty
+    if (types.isEmpty) {
+      types.add('students'); // Default to 'students' if no specific type is found
+    }
+
+    return RecipientInfo(types: types, level: level);
   }
 }
 
@@ -255,18 +299,16 @@ class _ChatBotState extends State<ChatBot> {
 
       Use natural language processing (NLP) to analyze the user’s request and deduce:
 
-      Recipients: Teachers, Students, or Both.
-
       Recipients: Teachers, Students, Parents or Both.
 
-      Student Grades: Grade 1, Grade 2, Grade 3, or All Grades (if applicable).
+      Student Grades: Grade 1, Grade 2, Grade 3.
       Avoid asking follow-up questions unless key details are ambiguous.
 
       Information Extraction
 
       Directly deduce the relevant details from the provided text:
 
-      Recipients: Clearly categorize them (e.g., "Teachers," "Students - Grade 1," "Students - All Grades").
+      Recipients: Clearly categorize them (e.g., "Teachers," "Students - Grade 1," "Students - Grade 2").
       Purpose: Generate a clear, concise description of the email's intent.
       Example input:
 
@@ -274,7 +316,7 @@ class _ChatBotState extends State<ChatBot> {
 
       Extracted:
       Recipients: Students
-      Levels: All levels (implied).
+      Levels: none (implied).
       Purpose: Inform students about school closure due to a water leak.
 
       Content Generation
@@ -292,7 +334,7 @@ class _ChatBotState extends State<ChatBot> {
       Output Format:
 
       Extracted Information:
-      Recipients: [e.g., Teachers, Students - All levels]
+      Recipients: [e.g., Teachers, Students]
       Purpose: [Short purpose summary]
 
       Generated Output:
@@ -301,7 +343,7 @@ class _ChatBotState extends State<ChatBot> {
       Example:
 
       Extracted Information:
-      Recipients: Students - All levels
+      Recipients: Students 
 
       Generated Output:
       Title: School Closure Tomorrow Due to Water Leak
