@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
- import 'package:sama/core/constants/app_colors.dart';
+import 'package:sama/core/constants/app_colors.dart';
 import 'package:sama/core/constants/app_font_style.dart';
 import 'package:sama/core/constants/assets.dart';
 import 'package:sama/core/constants/classes.dart';
@@ -89,7 +89,7 @@ class RowUnpaidStudent extends StatelessWidget {
                     style: AppFontStyle.styleRegular14(context).copyWith(color: AppColors.darkGray),
                   ),
                   Text(
-                    "${romanNumerals[levels.indexOf(studentModel.grade)]} ${letters[ordinalNames.indexOf(studentModel.section)]}",
+                    "${levels.contains(studentModel.grade) ? romanNumerals[levels.indexOf(studentModel.grade)] : 'N/A'} ${ordinalNames.contains(studentModel.section) ? letters[ordinalNames.indexOf(studentModel.section)] : 'N/A'}",
                     style: AppFontStyle.styleSemiBold18(context),
                   ),
                 ],
