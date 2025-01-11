@@ -27,12 +27,14 @@ class DrawerTitle extends StatelessWidget {
                 color: AppColors.accentOrange,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  "S",
-                  style: AppFontStyle.styleBold36(context).copyWith(
-                    color: AppColors.backgroundWhite,
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    "c",
+                    style: AppFontStyle.styleBold36(context).copyWith(
+                      color: AppColors.backgroundWhite,
+                    ),
                   ),
                 ),
               ),
@@ -43,9 +45,11 @@ class DrawerTitle extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                "SAMA",
-                style: AppFontStyle.styleBold38(context).copyWith(
-                  color: AppColors.backgroundWhite,
+                "Counselor",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.lightPurple,
                 ),
               ),
             ),

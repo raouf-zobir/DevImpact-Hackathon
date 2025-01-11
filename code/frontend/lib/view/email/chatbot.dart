@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sama/core/networking/gemini_api_services.dart';
 import 'package:sama/core/networking/api_constant.dart';
-import 'package:sama/core/constants/app_colors.dart';
+import 'package:sama/core/utils/header_with_search.dart';
 
 import 'dart:io';
 import 'package:csv/csv.dart';
@@ -16,12 +16,29 @@ class EmailService {
   static const String _username = 'aotdevimpact@gmail.com';
   static const String _password = 'vszx bbbx knal cxdy';
 
-  final String _studentsCsvPath =
-      'C:/Users/Raouf/Desktop/Project/Students/students.csv';
-  final String _teachersCsvPath =
-      'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
-
+  final String _studentsCsvPath = 'C:/Users/msi/Desktop/Project/Students/students.csv';
+  final String _teachersCsvPath = 'C:/Users/msi/Desktop/Project/Teachers/teachers.csv';
+  
   Map<String, List<List<dynamic>>> _cachedData = {};
+
+  String? _normalizeGrade(String? gradeText) {
+    if (gradeText == null) return null;
+    final normalized = gradeText.toLowerCase().replaceAll(' ', '');
+    
+    final gradePatterns = {
+      RegExp(r'grade(\d+)'): (Match m) => 'grade${m.group(1)}',
+      RegExp(r'g(\d+)'): (Match m) => 'grade${m.group(1)}',
+      RegExp(r'^(\d+)(st|nd|rd|th)?grade'): (Match m) => 'grade${m.group(1)}',
+      RegExp(r'^(\d+)(st|nd|rd|th)?$'): (Match m) => 'grade${m.group(1)}',
+    };
+
+    for (var pattern in gradePatterns.keys) {
+      if (pattern.hasMatch(normalized)) {
+        return gradePatterns[pattern]!(pattern.firstMatch(normalized)!);
+      }
+    }
+    return null;
+  }
 
   Future<void> _loadCsvData(String path, String type) async {
     if (!_cachedData.containsKey(type)) {
@@ -29,27 +46,23 @@ class EmailService {
       if (!await file.exists()) {
         throw Exception('CSV file not found at $path');
       }
-
       final csvString = await file.readAsString();
       _cachedData[type] = const CsvToListConverter().convert(csvString);
     }
   }
 
-  Future<List<String>> getEmailAddresses(String recipientType,
-      {String? level}) async {
-    final normalizedRecipientType =
-        recipientType.replaceAll(' ', '').toLowerCase();
+  Future<List<String>> getEmailAddresses(String recipientType, {List<String>? levels, List<String>? sections}) async {
+    final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
+    final normalizedLevels = levels?.map((level) => _normalizeGrade(level)).toList();
+    final normalizedSections = sections?.map((s) => s.trim().toLowerCase()).toList();
 
-    // Load appropriate CSV data based on recipient type
     if (normalizedRecipientType.contains('teachers')) {
       await _loadCsvData(_teachersCsvPath, 'teachers');
-      const emailIndex =
-          5; // Adjust this index based on your teachers.csv structure
+      const emailIndex = 5;
 
       for (var row in _cachedData['teachers']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
-
         String? teacherEmail = row[emailIndex]?.toString().trim();
         if (teacherEmail != null && teacherEmail.isNotEmpty) {
           emailList.add(teacherEmail);
@@ -57,29 +70,49 @@ class EmailService {
       }
     }
 
-    if (normalizedRecipientType.contains('students') ||
-        normalizedRecipientType.contains('parents') ||
+    if (normalizedRecipientType.contains('students') || 
+        normalizedRecipientType.contains('parents') || 
         normalizedRecipientType.contains('both')) {
       await _loadCsvData(_studentsCsvPath, 'students');
-      const emailIndex = 5; // Student email column
-      const parentEmailIndex = 10; // Parent email column
+      const emailIndex = 5;
+      const parentEmailIndex = 10;
+      const gradeIndex = 13;
+      const sectionIndex = 14;
 
       for (var row in _cachedData['students']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
 
-        String? studentEmail = row[emailIndex]?.toString().trim();
-        String? parentEmail = row[parentEmailIndex]?.toString().trim();
+        bool includeStudent = true;
 
-        if (normalizedRecipientType.contains('students') ||
-            normalizedRecipientType.contains('both')) {
-          if (studentEmail != null && studentEmail.isNotEmpty) {
-            emailList.add(studentEmail);
+        // Check grade if levels are specified
+        if (normalizedLevels != null && normalizedLevels.isNotEmpty) {
+          String studentGrade = _normalizeGrade(row[gradeIndex]?.toString()) ?? '';
+          if (!normalizedLevels.contains(studentGrade)) {
+            includeStudent = false;
           }
         }
-        if (normalizedRecipientType.contains('parents') ||
-            normalizedRecipientType.contains('both')) {
-          if (parentEmail != null && parentEmail.isNotEmpty) {
-            emailList.add(parentEmail);
+
+        // Check section if sections are specified
+        if (normalizedSections != null && normalizedSections.isNotEmpty) {
+          String studentSection = row[sectionIndex]?.toString().trim().toLowerCase() ?? '';
+          if (!normalizedSections.contains(studentSection)) {
+            includeStudent = false;
+          }
+        }
+
+        if (includeStudent) {
+          String? studentEmail = row[emailIndex]?.toString().trim();
+          String? parentEmail = row[parentEmailIndex]?.toString().trim();
+
+          if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('both')) {
+            if (studentEmail != null && studentEmail.isNotEmpty) {
+              emailList.add(studentEmail);
+            }
+          }
+          if (normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
+            if (parentEmail != null && parentEmail.isNotEmpty) {
+              emailList.add(parentEmail);
+            }
           }
         }
       }
@@ -90,7 +123,8 @@ class EmailService {
 
   Future<void> sendEmail({
     required List<String> recipientTypes,
-    String? level,
+    List<String>? levels,
+    List<String>? sections,
     required String subject,
     required String body,
   }) async {
@@ -102,13 +136,22 @@ class EmailService {
     );
 
     final emailAddresses = <String>{};
+    
     for (var recipientType in recipientTypes) {
-      final addresses = await getEmailAddresses(recipientType, level: level);
+      final addresses = await getEmailAddresses(
+        recipientType, 
+        levels: levels,
+        sections: sections,
+      );
       emailAddresses.addAll(addresses);
     }
 
     if (emailAddresses.isEmpty) {
-      throw Exception('No recipients found for types: $recipientTypes');
+      throw Exception(
+        'No recipients found for types: $recipientTypes'
+        '${levels != null ? ' in grades $levels' : ''}'
+        '${sections != null ? ' in sections $sections' : ''}'
+      );
     }
 
     print('Preparing to send email to ${emailAddresses.length} recipients');
@@ -121,7 +164,7 @@ class EmailService {
         ..text = body;
 
       try {
-        final sendReport = await send(message, smtpServer);
+        await send(message, smtpServer);
         print('Email sent successfully to $email');
       } catch (e) {
         print('Failed to send email to $email: $e');
@@ -132,22 +175,68 @@ class EmailService {
   }
 
   static RecipientInfo parseRecipientString(String recipients) {
-    final parts = recipients
-        .replaceAll(' ', '')
-        .toLowerCase()
-        .split(',')
-        .map((e) => e.trim())
-        .toList();
-    return RecipientInfo(types: parts, level: null);
+    final parts = recipients.toLowerCase().split(',').map((e) => e.trim()).toList();
+    List<String> levels = [];
+    List<String> types = [];
+    List<String> sections = [];
+
+    // First pass: extract grade and section information
+    for (var part in parts) {
+      if (part.contains('grade') || RegExp(r'g\d+').hasMatch(part)) {
+        final gradeMatch = RegExp(r'grade\s*(\d+)|g(\d+)').firstMatch(part);
+        if (gradeMatch != null) {
+          final gradeNum = gradeMatch.group(1) ?? gradeMatch.group(2);
+          levels.add('grade$gradeNum');
+        }
+      } else if (part.contains('section:')) {
+        // Extract section after "section:" prefix and trim any whitespace
+        final sectionName = part.split(':')[1].trim();
+        if (sectionName.isNotEmpty) {
+          sections.add(sectionName);
+        }
+      }
+    }
+
+    // Second pass: handle recipient types
+    for (var part in parts) {
+      if (part.contains('teachers')) {
+        types.add('teachers');
+      } 
+      if (part.contains('students')) {
+        types.add('students');
+      }
+      if (part.contains('parents')) {
+        types.add('parents');
+      }
+      if (part.contains('both')) {
+        types.addAll(['students', 'parents']);
+      }
+    }
+
+    if (types.isEmpty) {
+      types.add('students');
+    }
+
+    return RecipientInfo(
+      types: types.toSet().toList(),
+      levels: levels,
+      sections: sections,
+    );
   }
 }
 
 class RecipientInfo {
   final List<String> types;
-  final String? level;
+  final List<String> levels;
+  final List<String> sections;
 
-  RecipientInfo({required this.types, this.level});
+  RecipientInfo({
+    required this.types,
+    required this.levels,
+    this.sections = const [],
+  });
 }
+
 
 class EmailData {
   final String recipients;
@@ -222,17 +311,22 @@ class EmailData {
   }
 }
 
-class EmailHistoryItem {
+// Update the PromptHistory class
+class PromptHistory {
   final String prompt;
-  final EmailData emailData;
+  final String response;
   final DateTime timestamp;
   final bool wasSent;
+  final String recipients;
+  final String? error;
 
-  EmailHistoryItem({
+  PromptHistory({
     required this.prompt,
-    required this.emailData,
+    required this.response,
     required this.timestamp,
-    required this.wasSent,
+    this.wasSent = false,
+    this.recipients = '',
+    this.error,
   });
 }
 
@@ -249,11 +343,10 @@ class _ChatBotState extends State<ChatBot> {
   bool _isLoading = false;
   bool _showEmailPreview = false;
   final EmailService _emailService = EmailService();
+  final List<PromptHistory> _promptHistory = [];
 
   final GeminiAPIService _geminiAPIService =
       GeminiAPIService(apiKey: ApiConstants.apiKey);
-
-  final List<EmailHistoryItem> _history = [];
 
   void _resetState() {
     setState(() {
@@ -267,95 +360,81 @@ class _ChatBotState extends State<ChatBot> {
     setState(() => _isLoading = true);
 
     try {
-      const prompt = '''
-      You are an intelligent email assistant designed to extract recipient information, deduce the purpose of an email, and generate tailored content automatically without clutter or unnecessary responses. Your output must be concise and immediately actionable.
+    const prompt = '''
+You are an intelligent email assistant designed to extract recipient information, deduce the purpose of an email, and generate tailored content automatically without clutter or unnecessary responses. Your output must be concise and immediately actionable.
 
-      Workflow
-      Greeting and Input Parsing
+Workflow
+Greeting and Input Parsing
 
-      Start with:
+Start with:
+"Hello! I'm ready to create an email. Please provide your request."
 
-      "Hello! I’m ready to create an email. Please provide your request."
+Use natural language processing (NLP) to analyze the user's request and deduce:
 
-      Use natural language processing (NLP) to analyze the user’s request and deduce:
+Recipients: Teachers, Students, Parents or Both.
+Student Grades: Grade 1, Grade 2, Grade 3.
+Sections: AI, Cybersecurity, etc. (specified after "section:" in the request)
 
-      Recipients: Teachers, Students, or Both.
+Avoid asking follow-up questions unless key details are ambiguous.
 
-      Recipients: Teachers, Students, Parents or Both.
+Information Extraction
 
-      Student Levels: L1, L2, L3, or All levels (if applicable).
-      Avoid asking follow-up questions unless key details are ambiguous.
+Directly deduce the relevant details from the provided text:
 
-      Information Extraction
+Recipients: Clearly categorize them (e.g., "Teachers," "Students - Grade 1 - Section: AI," "Students - Grade 2")
+Purpose: Generate a clear, concise description of the email's intent.
 
-      Directly deduce the relevant details from the provided text:
+Example input:
+"Notify all students in Grade 1, section: AI about the upcoming cybersecurity workshop"
 
-      Recipients: Clearly categorize them (e.g., "Teachers," "Students - L1," "Students - All levels").
-      Purpose: Generate a clear, concise description of the email's intent.
-      Example input:
+Extracted:
+Recipients: Students, Grade 1, Section: AI
+Purpose: Inform students about upcoming cybersecurity workshop
 
-      "Notify all students about school closure tomorrow due to a water leak."
+Content Generation
 
-      Extracted:
-      Recipients: Students
-      Levels: All levels (implied).
-      Purpose: Inform students about school closure due to a water leak.
+Based on extracted details, generate:
+Title: Clear and concise, summarizing the purpose.
+Text: Fully detailed email text, appropriately addressing the audience.
 
-      Content Generation
+Example Output:
+Title: "Cybersecurity Workshop Announcement"
+Text: "Dear AI Section Students, we are excited to announce an upcoming cybersecurity workshop..."
 
-      Based on extracted details, generate:
-      Title: Clear and concise, summarizing the purpose.
-      Text: Fully detailed email text, appropriately addressing the audience.
-      Example Output:
-      Title: "School Closure Tomorrow Due to Water Leak"
-      Text: "Dear Students, please be advised that the school will be closed tomorrow due to a water leak. We apologize for any inconvenience this may cause. Further updates will be provided as they become available."
+Structured Output for Extraction
 
-      Structured Output for Extraction
+Present the final result in an easy-to-extract format:
 
-      Present the final result in an easy-to-extract format.
-      Output Format:
+Extracted Information:
+Recipients: [e.g., Students, Grade 1, Section: AI]
+Purpose: [Short purpose summary]
 
-      Extracted Information:
-      Recipients: [e.g., Teachers, Students - All levels]
-      Purpose: [Short purpose summary]
+Generated Output:
+Title: [Generated Title]
+Text: [Generated Text]
 
-      Generated Output:
-      Title: [Generated Title]
-      Text: [Generated Text]
-      Example:
+No Clutter Policy
+Avoid conversational fluff or redundant confirmations.
+Present results immediately for clarity.
 
-      Extracted Information:
-      Recipients: Students - All levels
-
-      Generated Output:
-      Title: School Closure Tomorrow Due to Water Leak
-      Text: Dear Students, please be advised that the school will be closed tomorrow due to a water leak. We apologize for any inconvenience this may cause. Further updates will be provided as they become available.
-
-      No Clutter Policy
-
-      Avoid conversational fluff like “Okay, processing your request…” or redundant confirmations.
-      Present results immediately for clarity.
-      Ambiguities or Missing Details
-
-      Only prompt the user to clarify if absolutely necessary. If no specific level is mentioned for Students, default to “All levels.”
-      ''';
-
+Ambiguities or Missing Details
+Only prompt the user to clarify if absolutely necessary.
+If no specific level is mentioned for Students, default to "All levels."
+If no section is specified, assume all sections.
+''';
       final responseText = await _geminiAPIService
           .generateContent(prompt + _inputController.text);
 
       if (responseText != null) {
-        final emailData = EmailData.fromResponse(responseText);
+        _promptHistory.add(PromptHistory(
+          prompt: _inputController.text,
+          response: responseText,
+          timestamp: DateTime.now(),
+        ));
+        
         setState(() {
-          _emailData = emailData;
+          _emailData = EmailData.fromResponse(responseText);
           _showEmailPreview = true;
-          _history.insert(
-              0,
-              EmailHistoryItem(
-                prompt: _inputController.text,
-                emailData: emailData,
-                timestamp: DateTime.now(),
-                wasSent: false,
-              ));
         });
       }
     } catch (e) {
@@ -372,93 +451,163 @@ class _ChatBotState extends State<ChatBot> {
     }
   }
 
-  void _showHistory() {
-    showModalBottomSheet(
+  // Update the send email logic
+  Future<void> _sendEmail() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      final recipientInfo = EmailService.parseRecipientString(
+          _emailData!.recipients);
+      
+      await _emailService.sendEmail(
+        recipientTypes: recipientInfo.types,
+        levels: recipientInfo.levels,
+        sections: recipientInfo.sections,
+        subject: _emailData!.title,
+        body: _emailData!.text,
+      );
+      
+      // Update the last history entry with success status
+      if (_promptHistory.isNotEmpty) {
+        final lastIndex = _promptHistory.length - 1;
+        _promptHistory[lastIndex] = PromptHistory(
+          prompt: _promptHistory[lastIndex].prompt,
+          response: _promptHistory[lastIndex].response,
+          timestamp: _promptHistory[lastIndex].timestamp,
+          wasSent: true,
+          recipients: _emailData!.recipients,
+        );
+      }
+      
+      Get.snackbar(
+        'Success',
+        'Email sent successfully!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      _resetState();
+    } catch (e) {
+      // Update the last history entry with error status
+      if (_promptHistory.isNotEmpty) {
+        final lastIndex = _promptHistory.length - 1;
+        _promptHistory[lastIndex] = PromptHistory(
+          prompt: _promptHistory[lastIndex].prompt,
+          response: _promptHistory[lastIndex].response,
+          timestamp: _promptHistory[lastIndex].timestamp,
+          wasSent: false,
+          recipients: _emailData!.recipients,
+          error: e.toString(),
+        );
+      }
+      
+      Get.snackbar(
+        'Error',
+        'Failed to send email: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showHistoryDialog() {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, controller) => Container(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.7,
+          height: MediaQuery.of(context).size.height * 0.8,
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.lightestGray,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border:
-                      Border(bottom: BorderSide(color: AppColors.borderGray)),
-                ),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Email History',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Email History',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
                     ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: Colors.blue.shade700),
+                  ),
+                ],
               ),
+              const Divider(),
               Expanded(
                 child: ListView.builder(
-                  controller: controller,
-                  itemCount: _history.length,
+                  itemCount: _promptHistory.length,
                   itemBuilder: (context, index) {
-                    final item = _history[index];
+                    final history = _promptHistory[_promptHistory.length - 1 - index];
                     return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: ListTile(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ExpansionTile(
+                        leading: Icon(
+                          history.wasSent ? Icons.check_circle : Icons.error,
+                          color: history.wasSent ? Colors.green : Colors.red,
+                        ),
                         title: Text(
-                          item.emailData.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          history.prompt,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 4),
                             Text(
-                              'To: ${item.emailData.recipients}',
-                              style: TextStyle(color: Colors.blue.shade700),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Prompt: ${item.prompt}',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Created: ${item.timestamp.toString().substring(0, 16)}',
+                              'Generated on: ${history.timestamp.toString().split('.')[0]}',
                               style: TextStyle(color: Colors.grey.shade600),
                             ),
+                            if (history.recipients.isNotEmpty)
+                              Text(
+                                'Recipients: ${history.recipients}',
+                                style: TextStyle(
+                                  color: Colors.blue.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                           ],
                         ),
-                        trailing: Icon(
-                          item.wasSent ? Icons.check_circle : Icons.history,
-                          color: item.wasSent ? Colors.green : Colors.grey,
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          setState(() {
-                            _emailData = item.emailData;
-                            _showEmailPreview = true;
-                          });
-                        },
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Response:',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(history.response),
+                                if (history.error != null) ...[
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Error: ${history.error}',
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -472,92 +621,27 @@ class _ChatBotState extends State<ChatBot> {
   }
 
   Widget _buildInputSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.lightestGray,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.subtleGray.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 1),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _inputController,
+          decoration: const InputDecoration(
+            labelText: 'Enter your request',
+            border: OutlineInputBorder(),
+            hintText:
+                'e.g., Notify all students about school closure tomorrow due to a water leak',
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _inputController,
-            decoration: InputDecoration(
-              labelText: 'Enter your request',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.borderGray),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.borderGray),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide:
-                    BorderSide(color: AppColors.primaryPurple, width: 2),
-              ),
-              filled: true,
-              fillColor: AppColors.lightGray,
-              hintText:
-                  'e.g., Notify all students about school closure tomorrow due to a water leak',
-              hintStyle: TextStyle(color: AppColors.darkGray),
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 20),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.buttonBlue,
-                  AppColors.buttonBlue.withBlue(255),
-                ],
-              ),
-            ),
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _sendMessage,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Text(
-                      'Generate Email',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      ),
+          maxLines: 3,
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _sendMessage,
+          child: _isLoading
+              ? const CircularProgressIndicator()
+              : const Text('Generate Email'),
+        ),
+      ],
     );
   }
 
@@ -565,163 +649,56 @@ class _ChatBotState extends State<ChatBot> {
     if (_emailData == null) return const SizedBox.shrink();
 
     return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(24.0),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.lightestGray, AppColors.lightPurple],
-          ),
-        ),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               _emailData!.title,
-              style: TextStyle(
-                fontSize: 28,
+              style: const TextStyle(
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
-                color: AppColors.textBlack,
               ),
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primaryPurple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'To: ${_emailData!.recipients}',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.primaryPurple,
-                  fontWeight: FontWeight.w500,
-                ),
+            const SizedBox(height: 8),
+            Text(
+              'To: ${_emailData!.recipients}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
               ),
             ),
-            Divider(height: 32, color: AppColors.borderGray),
+            const Divider(height: 24),
             Text(
               _emailData!.text,
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.6,
-                color: AppColors.textBlack,
-              ),
+              style: const TextStyle(fontSize: 16),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
                   onPressed: _resetState,
+                  child: const Text('Reject'),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'Reject',
-                    style: TextStyle(
-                      color: AppColors.errorRed,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    foregroundColor: Colors.red,
                   ),
                 ),
                 const SizedBox(width: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.secondaryGreen,
-                        AppColors.secondaryGreen.withGreen(200),
-                      ],
-                    ),
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        setState(() => _isLoading = true);
-
-                        final recipientInfo = EmailService.parseRecipientString(
-                            _emailData!.recipients);
-
-                        await _emailService.sendEmail(
-                          recipientTypes: recipientInfo.types,
-                          level: recipientInfo.level,
-                          subject: _emailData!.title,
-                          body: _emailData!.text,
-                        );
-
-                        Get.snackbar(
-                          'Success',
-                          'Email sent successfully!',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.green,
-                          colorText: Colors.white,
-                        );
-                        setState(() {
-                          if (_history.isNotEmpty) {
-                            final latestEmail = _history.first;
-                            _history[0] = EmailHistoryItem(
-                              prompt: latestEmail.prompt,
-                              emailData: latestEmail.emailData,
-                              timestamp: latestEmail.timestamp,
-                              wasSent: true,
-                            );
-                          }
-                        });
-                        _resetState();
-                      } catch (e) {
-                        Get.snackbar(
-                          'Error',
-                          'Failed to send email: $e',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.red,
-                          colorText: Colors.white,
-                        );
-                      } finally {
-                        setState(() => _isLoading = false);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Text(
-                            'Send Email',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _sendEmail,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                      : const Text('Send Email'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
                   ),
                 ),
               ],
@@ -735,43 +712,198 @@ class _ChatBotState extends State<ChatBot> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Email Assistant',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textBlack,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: AppColors.lightestGray,
-        foregroundColor: AppColors.textBlack,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: _showHistory,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Container(
-        color: AppColors.backgroundWhite,
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (!_showEmailPreview) _buildInputSection(),
-              if (_showEmailPreview)
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              children: [
+                const HeaderWithSearch(
+                  title: "Email Assistant",
+                  showSearch: false,
+                ),
+                const SizedBox(height: 28),
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: _buildEmailPreview(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.blue.shade50,
+                          Colors.white,
+                          Colors.white,
+                        ],
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (!_showEmailPreview)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(25),
+                                border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    spreadRadius: 5,
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                children: [
+                                  TextField(
+                                    controller: _inputController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Enter your request',
+                                      labelStyle: TextStyle(color: Colors.blue.shade400),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide(color: Colors.blue.shade400),
+                                      ),
+                                      hintText: 'e.g., Notify all students about school closure tomorrow due to a water leak',
+                                    ),
+                                    maxLines: 3,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _isLoading ? null : _sendMessage,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue.shade400,
+                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                    ),
+                                    child: _isLoading
+                                        ? const CircularProgressIndicator(color: Colors.white)
+                                        : const Text(
+                                            'Generate Email',
+                                            style: TextStyle(fontSize: 16),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (_showEmailPreview)
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(25),
+                                    border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.blue.withOpacity(0.1),
+                                        spreadRadius: 5,
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 5),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _emailData!.title,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'To: ${_emailData!.recipients}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.blue.shade400,
+                                        ),
+                                      ),
+                                      Divider(color: Colors.blue.shade100, height: 24),
+                                      Text(
+                                        _emailData!.text,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          TextButton(
+                                            onPressed: _resetState,
+                                            style: TextButton.styleFrom(
+                                              foregroundColor: Colors.red.shade400,
+                                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                            ),
+                                            child: const Text('Reject'),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          ElevatedButton(
+                                            onPressed: _isLoading ? null : _sendEmail,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green.shade400,
+                                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(15),
+                                              ),
+                                            ),
+                                            child: _isLoading
+                                                ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(color: Colors.white),
+                                                  )
+                                                : const Text('Send Email'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
+          Positioned(
+            right: 60,  // Increased from 40
+            bottom: 60, // Increased from 40
+            child: FloatingActionButton.extended(
+              onPressed: _showHistoryDialog,
+              backgroundColor: Colors.blue.shade700,
+              icon: const Icon(
+                Icons.history,
+                color: Colors.white,
+                size: 32,
+              ),
+              label: const Text(
+                'History',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              elevation: 4,
+            ),
+          ),
+        ],
       ),
     );
   }
