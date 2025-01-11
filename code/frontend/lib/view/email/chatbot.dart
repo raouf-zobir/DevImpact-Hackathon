@@ -21,14 +21,10 @@ class EmailService {
   
   Map<String, List<List<dynamic>>> _cachedData = {};
 
-  // Helper method to extract and normalize grade information
   String? _normalizeGrade(String? gradeText) {
     if (gradeText == null) return null;
-    
-    // Remove whitespace and convert to lowercase
     final normalized = gradeText.toLowerCase().replaceAll(' ', '');
     
-    // Handle various grade formats
     final gradePatterns = {
       RegExp(r'grade(\d+)'): (Match m) => 'grade${m.group(1)}',
       RegExp(r'g(\d+)'): (Match m) => 'grade${m.group(1)}',
@@ -41,7 +37,6 @@ class EmailService {
         return gradePatterns[pattern]!(pattern.firstMatch(normalized)!);
       }
     }
-
     return null;
   }
 
@@ -51,25 +46,23 @@ class EmailService {
       if (!await file.exists()) {
         throw Exception('CSV file not found at $path');
       }
-
       final csvString = await file.readAsString();
       _cachedData[type] = const CsvToListConverter().convert(csvString);
     }
   }
 
-  Future<List<String>> getEmailAddresses(String recipientType, {List<String>? levels}) async {
+  Future<List<String>> getEmailAddresses(String recipientType, {List<String>? levels, List<String>? sections}) async {
     final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
     final normalizedLevels = levels?.map((level) => _normalizeGrade(level)).toList();
+    final normalizedSections = sections?.map((s) => s.trim().toLowerCase()).toList();
 
-    // Load appropriate CSV data based on recipient type
     if (normalizedRecipientType.contains('teachers')) {
       await _loadCsvData(_teachersCsvPath, 'teachers');
-      const emailIndex = 5; // Adjust this index based on your teachers.csv structure
+      const emailIndex = 5;
 
       for (var row in _cachedData['teachers']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
-
         String? teacherEmail = row[emailIndex]?.toString().trim();
         if (teacherEmail != null && teacherEmail.isNotEmpty) {
           emailList.add(teacherEmail);
@@ -81,30 +74,45 @@ class EmailService {
         normalizedRecipientType.contains('parents') || 
         normalizedRecipientType.contains('both')) {
       await _loadCsvData(_studentsCsvPath, 'students');
-      const emailIndex = 5; // Student email column
-      const parentEmailIndex = 10; // Parent email column
-      const gradeIndex = 13; // Grade column index
+      const emailIndex = 5;
+      const parentEmailIndex = 10;
+      const gradeIndex = 13;
+      const sectionIndex = 14;
 
       for (var row in _cachedData['students']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
 
+        bool includeStudent = true;
+
         // Check grade if levels are specified
         if (normalizedLevels != null && normalizedLevels.isNotEmpty) {
           String studentGrade = _normalizeGrade(row[gradeIndex]?.toString()) ?? '';
-          if (!normalizedLevels.contains(studentGrade)) continue;
-        }
-
-        String? studentEmail = row[emailIndex]?.toString().trim();
-        String? parentEmail = row[parentEmailIndex]?.toString().trim();
-
-        if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('both')) {
-          if (studentEmail != null && studentEmail.isNotEmpty) {
-            emailList.add(studentEmail);
+          if (!normalizedLevels.contains(studentGrade)) {
+            includeStudent = false;
           }
         }
-        if (normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
-          if (parentEmail != null && parentEmail.isNotEmpty) {
-            emailList.add(parentEmail);
+
+        // Check section if sections are specified
+        if (normalizedSections != null && normalizedSections.isNotEmpty) {
+          String studentSection = row[sectionIndex]?.toString().trim().toLowerCase() ?? '';
+          if (!normalizedSections.contains(studentSection)) {
+            includeStudent = false;
+          }
+        }
+
+        if (includeStudent) {
+          String? studentEmail = row[emailIndex]?.toString().trim();
+          String? parentEmail = row[parentEmailIndex]?.toString().trim();
+
+          if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('both')) {
+            if (studentEmail != null && studentEmail.isNotEmpty) {
+              emailList.add(studentEmail);
+            }
+          }
+          if (normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
+            if (parentEmail != null && parentEmail.isNotEmpty) {
+              emailList.add(parentEmail);
+            }
           }
         }
       }
@@ -116,6 +124,7 @@ class EmailService {
   Future<void> sendEmail({
     required List<String> recipientTypes,
     List<String>? levels,
+    List<String>? sections,
     required String subject,
     required String body,
   }) async {
@@ -128,14 +137,21 @@ class EmailService {
 
     final emailAddresses = <String>{};
     
-    // Process each recipient type separately
     for (var recipientType in recipientTypes) {
-      final addresses = await getEmailAddresses(recipientType, levels: levels);
+      final addresses = await getEmailAddresses(
+        recipientType, 
+        levels: levels,
+        sections: sections,
+      );
       emailAddresses.addAll(addresses);
     }
 
     if (emailAddresses.isEmpty) {
-      throw Exception('No recipients found for types: $recipientTypes${levels != null ? ' in grades $levels' : ''}');
+      throw Exception(
+        'No recipients found for types: $recipientTypes'
+        '${levels != null ? ' in grades $levels' : ''}'
+        '${sections != null ? ' in sections $sections' : ''}'
+      );
     }
 
     print('Preparing to send email to ${emailAddresses.length} recipients');
@@ -162,15 +178,21 @@ class EmailService {
     final parts = recipients.toLowerCase().split(',').map((e) => e.trim()).toList();
     List<String> levels = [];
     List<String> types = [];
+    List<String> sections = [];
 
-    // First pass: extract grade information
+    // First pass: extract grade and section information
     for (var part in parts) {
       if (part.contains('grade') || RegExp(r'g\d+').hasMatch(part)) {
-        // Extract grade number and standardize format
         final gradeMatch = RegExp(r'grade\s*(\d+)|g(\d+)').firstMatch(part);
         if (gradeMatch != null) {
           final gradeNum = gradeMatch.group(1) ?? gradeMatch.group(2);
           levels.add('grade$gradeNum');
+        }
+      } else if (part.contains('section:')) {
+        // Extract section after "section:" prefix and trim any whitespace
+        final sectionName = part.split(':')[1].trim();
+        if (sectionName.isNotEmpty) {
+          sections.add(sectionName);
         }
       }
     }
@@ -191,21 +213,30 @@ class EmailService {
       }
     }
 
-    // Ensure types list is not empty
     if (types.isEmpty) {
-      types.add('students'); // Default to 'students' if no specific type is found
+      types.add('students');
     }
 
-    return RecipientInfo(types: types.toSet().toList(), levels: levels);
+    return RecipientInfo(
+      types: types.toSet().toList(),
+      levels: levels,
+      sections: sections,
+    );
   }
 }
 
 class RecipientInfo {
   final List<String> types;
   final List<String> levels;
+  final List<String> sections;
 
-  RecipientInfo({required this.types, required this.levels});
+  RecipientInfo({
+    required this.types,
+    required this.levels,
+    this.sections = const [],
+  });
 }
+
 
 class EmailData {
   final String recipients;
@@ -329,77 +360,68 @@ class _ChatBotState extends State<ChatBot> {
     setState(() => _isLoading = true);
 
     try {
-      const prompt = '''
-      You are an intelligent email assistant designed to extract recipient information, deduce the purpose of an email, and generate tailored content automatically without clutter or unnecessary responses. Your output must be concise and immediately actionable.
+    const prompt = '''
+You are an intelligent email assistant designed to extract recipient information, deduce the purpose of an email, and generate tailored content automatically without clutter or unnecessary responses. Your output must be concise and immediately actionable.
 
-      Workflow
-      Greeting and Input Parsing
+Workflow
+Greeting and Input Parsing
 
-      Start with:
+Start with:
+"Hello! I'm ready to create an email. Please provide your request."
 
-      "Hello! I’m ready to create an email. Please provide your request."
+Use natural language processing (NLP) to analyze the user's request and deduce:
 
-      Use natural language processing (NLP) to analyze the user’s request and deduce:
+Recipients: Teachers, Students, Parents or Both.
+Student Grades: Grade 1, Grade 2, Grade 3.
+Sections: AI, Cybersecurity, etc. (specified after "section:" in the request)
 
-      Recipients: Teachers, Students, Parents or Both.
+Avoid asking follow-up questions unless key details are ambiguous.
 
-      Student Grades: Grade 1, Grade 2, Grade 3.
-      Avoid asking follow-up questions unless key details are ambiguous.
+Information Extraction
 
-      Information Extraction
+Directly deduce the relevant details from the provided text:
 
-      Directly deduce the relevant details from the provided text:
+Recipients: Clearly categorize them (e.g., "Teachers," "Students - Grade 1 - Section: AI," "Students - Grade 2")
+Purpose: Generate a clear, concise description of the email's intent.
 
-      Recipients: Clearly categorize them (e.g., "Teachers," "Students - Grade 1," "Students - Grade 2").
-      Purpose: Generate a clear, concise description of the email's intent.
-      Example input:
+Example input:
+"Notify all students in Grade 1, section: AI about the upcoming cybersecurity workshop"
 
-      "Notify all students about school closure tomorrow due to a water leak."
+Extracted:
+Recipients: Students, Grade 1, Section: AI
+Purpose: Inform students about upcoming cybersecurity workshop
 
-      Extracted:
-      Recipients: Students
-      Levels: none (implied).
-      Purpose: Inform students about school closure due to a water leak.
+Content Generation
 
-      Content Generation
+Based on extracted details, generate:
+Title: Clear and concise, summarizing the purpose.
+Text: Fully detailed email text, appropriately addressing the audience.
 
-      Based on extracted details, generate:
-      Title: Clear and concise, summarizing the purpose.
-      Text: Fully detailed email text, appropriately addressing the audience.
-      Example Output:
-      Title: "School Closure Tomorrow Due to Water Leak"
-      Text: "Dear Students, please be advised that the school will be closed tomorrow due to a water leak. We apologize for any inconvenience this may cause. Further updates will be provided as they become available."
+Example Output:
+Title: "Cybersecurity Workshop Announcement"
+Text: "Dear AI Section Students, we are excited to announce an upcoming cybersecurity workshop..."
 
-      Structured Output for Extraction
+Structured Output for Extraction
 
-      Present the final result in an easy-to-extract format.
-      Output Format:
+Present the final result in an easy-to-extract format:
 
-      Extracted Information:
-      Recipients: [e.g., Teachers, Students]
-      Purpose: [Short purpose summary]
+Extracted Information:
+Recipients: [e.g., Students, Grade 1, Section: AI]
+Purpose: [Short purpose summary]
 
-      Generated Output:
-      Title: [Generated Title]
-      Text: [Generated Text]
-      Example:
+Generated Output:
+Title: [Generated Title]
+Text: [Generated Text]
 
-      Extracted Information:
-      Recipients: Students 
+No Clutter Policy
+Avoid conversational fluff or redundant confirmations.
+Present results immediately for clarity.
 
-      Generated Output:
-      Title: School Closure Tomorrow Due to Water Leak
-      Text: Dear Students, please be advised that the school will be closed tomorrow due to a water leak. We apologize for any inconvenience this may cause. Further updates will be provided as they become available.
-
-      No Clutter Policy
-
-      Avoid conversational fluff like “Okay, processing your request…” or redundant confirmations.
-      Present results immediately for clarity.
-      Ambiguities or Missing Details
-
-      Only prompt the user to clarify if absolutely necessary. If no specific level is mentioned for Students, default to “All levels.”
-      ''';
-
+Ambiguities or Missing Details
+Only prompt the user to clarify if absolutely necessary.
+If no specific level is mentioned for Students, default to "All levels."
+If no section is specified, assume all sections.
+''';
       final responseText = await _geminiAPIService
           .generateContent(prompt + _inputController.text);
 
@@ -440,6 +462,7 @@ class _ChatBotState extends State<ChatBot> {
       await _emailService.sendEmail(
         recipientTypes: recipientInfo.types,
         levels: recipientInfo.levels,
+        sections: recipientInfo.sections,
         subject: _emailData!.title,
         body: _emailData!.text,
       );
