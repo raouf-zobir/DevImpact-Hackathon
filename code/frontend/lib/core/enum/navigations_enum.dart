@@ -9,5 +9,5 @@ enum NavigationEnum {
   StudentDetails,
   TeacherDetails,
   EmailSender,
-  Apsence,  
+  Absence,  
 }

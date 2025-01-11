@@ -18,15 +18,17 @@ class EmailService {
   static const String _username = 'aotdevimpact@gmail.com';
   static const String _password = 'vszx bbbx knal cxdy';
 
-  final String _studentsCsvPath = 'C:/Users/msi/Desktop/Project/Students/students.csv';
-  final String _teachersCsvPath = 'C:/Users/msi/Desktop/Project/Teachers/teachers.csv';
-  
+  final String _studentsCsvPath =
+      'C:/Users/Raouf/Desktop/Project/Students/students.csv';
+  final String _teachersCsvPath =
+      'C:/Users/Raouf/Desktop/Project/Teachers/teachers.csv';
+
   Map<String, List<List<dynamic>>> _cachedData = {};
 
   String? _normalizeGrade(String? gradeText) {
     if (gradeText == null) return null;
     final normalized = gradeText.toLowerCase().replaceAll(' ', '');
-    
+
     final gradePatterns = {
       RegExp(r'grade(\d+)'): (Match m) => 'grade${m.group(1)}',
       RegExp(r'g(\d+)'): (Match m) => 'grade${m.group(1)}',
@@ -53,11 +55,15 @@ class EmailService {
     }
   }
 
-  Future<List<String>> getEmailAddresses(String recipientType, {List<String>? levels, List<String>? sections}) async {
-    final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
+  Future<List<String>> getEmailAddresses(String recipientType,
+      {List<String>? levels, List<String>? sections}) async {
+    final normalizedRecipientType =
+        recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
-    final normalizedLevels = levels?.map((level) => _normalizeGrade(level)).toList();
-    final normalizedSections = sections?.map((s) => s.trim().toLowerCase()).toList();
+    final normalizedLevels =
+        levels?.map((level) => _normalizeGrade(level)).toList();
+    final normalizedSections =
+        sections?.map((s) => s.trim().toLowerCase()).toList();
 
     if (normalizedRecipientType.contains('teachers')) {
       await _loadCsvData(_teachersCsvPath, 'teachers');
@@ -72,8 +78,8 @@ class EmailService {
       }
     }
 
-    if (normalizedRecipientType.contains('students') || 
-        normalizedRecipientType.contains('parents') || 
+    if (normalizedRecipientType.contains('students') ||
+        normalizedRecipientType.contains('parents') ||
         normalizedRecipientType.contains('both')) {
       await _loadCsvData(_studentsCsvPath, 'students');
       const emailIndex = 5;
@@ -88,7 +94,8 @@ class EmailService {
 
         // Check grade if levels are specified
         if (normalizedLevels != null && normalizedLevels.isNotEmpty) {
-          String studentGrade = _normalizeGrade(row[gradeIndex]?.toString()) ?? '';
+          String studentGrade =
+              _normalizeGrade(row[gradeIndex]?.toString()) ?? '';
           if (!normalizedLevels.contains(studentGrade)) {
             includeStudent = false;
           }
@@ -96,7 +103,8 @@ class EmailService {
 
         // Check section if sections are specified
         if (normalizedSections != null && normalizedSections.isNotEmpty) {
-          String studentSection = row[sectionIndex]?.toString().trim().toLowerCase() ?? '';
+          String studentSection =
+              row[sectionIndex]?.toString().trim().toLowerCase() ?? '';
           if (!normalizedSections.contains(studentSection)) {
             includeStudent = false;
           }
@@ -106,12 +114,14 @@ class EmailService {
           String? studentEmail = row[emailIndex]?.toString().trim();
           String? parentEmail = row[parentEmailIndex]?.toString().trim();
 
-          if (normalizedRecipientType.contains('students') || normalizedRecipientType.contains('both')) {
+          if (normalizedRecipientType.contains('students') ||
+              normalizedRecipientType.contains('both')) {
             if (studentEmail != null && studentEmail.isNotEmpty) {
               emailList.add(studentEmail);
             }
           }
-          if (normalizedRecipientType.contains('parents') || normalizedRecipientType.contains('both')) {
+          if (normalizedRecipientType.contains('parents') ||
+              normalizedRecipientType.contains('both')) {
             if (parentEmail != null && parentEmail.isNotEmpty) {
               emailList.add(parentEmail);
             }
@@ -139,10 +149,10 @@ class EmailService {
     );
 
     final emailAddresses = <String>{};
-    
+
     for (var recipientType in recipientTypes) {
       final addresses = await getEmailAddresses(
-        recipientType, 
+        recipientType,
         levels: levels,
         sections: sections,
       );
@@ -150,11 +160,9 @@ class EmailService {
     }
 
     if (emailAddresses.isEmpty) {
-      throw Exception(
-        'No recipients found for types: $recipientTypes'
-        '${levels != null ? ' in grades $levels' : ''}'
-        '${sections != null ? ' in sections $sections' : ''}'
-      );
+      throw Exception('No recipients found for types: $recipientTypes'
+          '${levels != null ? ' in grades $levels' : ''}'
+          '${sections != null ? ' in sections $sections' : ''}');
     }
 
     print('Preparing to send email to ${emailAddresses.length} recipients');
@@ -228,7 +236,8 @@ class EmailService {
   }
 
   static RecipientInfo parseRecipientString(String recipients) {
-    final parts = recipients.toLowerCase().split(',').map((e) => e.trim()).toList();
+    final parts =
+        recipients.toLowerCase().split(',').map((e) => e.trim()).toList();
     List<String> levels = [];
     List<String> types = [];
     List<String> sections = [];
@@ -254,7 +263,7 @@ class EmailService {
     for (var part in parts) {
       if (part.contains('teachers')) {
         types.add('teachers');
-      } 
+      }
       if (part.contains('students')) {
         types.add('students');
       }
@@ -289,7 +298,6 @@ class RecipientInfo {
     this.sections = const [],
   });
 }
-
 
 class EmailData {
   final String recipients;
@@ -474,7 +482,7 @@ class _ChatBotState extends State<ChatBot> {
     setState(() => _isLoading = true);
 
     try {
-    const prompt = '''
+      const prompt = '''
 You are an intelligent email assistant designed to extract recipient information, deduce the purpose of an email, and generate tailored content automatically without clutter or unnecessary responses. Your output must be concise and immediately actionable.
 
 Workflow
@@ -545,7 +553,7 @@ If no section is specified, assume all sections.
           response: responseText,
           timestamp: DateTime.now(),
         ));
-        
+
         setState(() {
           _emailData = EmailData.fromResponse(responseText);
           _showEmailPreview = true;
@@ -569,10 +577,10 @@ If no section is specified, assume all sections.
   Future<void> _sendEmail() async {
     try {
       setState(() => _isLoading = true);
-      
-      final recipientInfo = EmailService.parseRecipientString(
-          _emailData!.recipients);
-      
+
+      final recipientInfo =
+          EmailService.parseRecipientString(_emailData!.recipients);
+
       await _emailService.sendEmail(
         recipientTypes: recipientInfo.types,
         levels: recipientInfo.levels,
@@ -581,7 +589,7 @@ If no section is specified, assume all sections.
         body: _emailData!.text,
         attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
       );
-      
+
       // Update the last history entry with success status
       if (_promptHistory.isNotEmpty) {
         final lastIndex = _promptHistory.length - 1;
@@ -593,7 +601,7 @@ If no section is specified, assume all sections.
           recipients: _emailData!.recipients,
         );
       }
-      
+
       Get.snackbar(
         'Success',
         'Email sent successfully!',
@@ -615,7 +623,7 @@ If no section is specified, assume all sections.
           error: e.toString(),
         );
       }
-      
+
       Get.snackbar(
         'Error',
         'Failed to send email: $e',
@@ -667,7 +675,8 @@ If no section is specified, assume all sections.
                 child: ListView.builder(
                   itemCount: _promptHistory.length,
                   itemBuilder: (context, index) {
-                    final history = _promptHistory[_promptHistory.length - 1 - index];
+                    final history =
+                        _promptHistory[_promptHistory.length - 1 - index];
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       child: ExpansionTile(
@@ -861,7 +870,9 @@ If no section is specified, assume all sections.
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(25),
-                                border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
+                                border: Border.all(
+                                    color: Colors.blue.withOpacity(0.3),
+                                    width: 2),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.blue.withOpacity(0.1),
@@ -878,15 +889,18 @@ If no section is specified, assume all sections.
                                     controller: _inputController,
                                     decoration: InputDecoration(
                                       labelText: 'Enter your request',
-                                      labelStyle: TextStyle(color: Colors.blue.shade400),
+                                      labelStyle: TextStyle(
+                                          color: Colors.blue.shade400),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(15),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.blue.shade400),
+                                        borderSide: BorderSide(
+                                            color: Colors.blue.shade400),
                                       ),
-                                      hintText: 'e.g., Notify all students about school closure tomorrow due to a water leak',
+                                      hintText:
+                                          'e.g., Notify all students about school closure tomorrow due to a water leak',
                                     ),
                                     maxLines: 3,
                                   ),
@@ -895,13 +909,15 @@ If no section is specified, assume all sections.
                                     onPressed: _isLoading ? null : _sendMessage,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.blue.shade400,
-                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 30, vertical: 15),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(15),
                                       ),
                                     ),
                                     child: _isLoading
-                                        ? const CircularProgressIndicator(color: Colors.white)
+                                        ? const CircularProgressIndicator(
+                                            color: Colors.white)
                                         : const Text(
                                             'Generate Email',
                                             style: TextStyle(fontSize: 16),
@@ -912,13 +928,15 @@ If no section is specified, assume all sections.
                                     onPressed: _isLoading ? null : _pickFiles,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.blue.shade400,
-                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 30, vertical: 15),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(15),
                                       ),
                                     ),
                                     child: _isLoading
-                                        ? const CircularProgressIndicator(color: Colors.white)
+                                        ? const CircularProgressIndicator(
+                                            color: Colors.white)
                                         : const Text(
                                             'Add Attachments',
                                             style: TextStyle(fontSize: 16),
@@ -935,7 +953,9 @@ If no section is specified, assume all sections.
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(25),
-                                    border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
+                                    border: Border.all(
+                                        color: Colors.blue.withOpacity(0.3),
+                                        width: 2),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.blue.withOpacity(0.1),
@@ -947,7 +967,8 @@ If no section is specified, assume all sections.
                                   ),
                                   padding: const EdgeInsets.all(20),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         _emailData!.title,
@@ -964,7 +985,9 @@ If no section is specified, assume all sections.
                                           color: Colors.blue.shade400,
                                         ),
                                       ),
-                                      Divider(color: Colors.blue.shade100, height: 24),
+                                      Divider(
+                                          color: Colors.blue.shade100,
+                                          height: 24),
                                       Text(
                                         _emailData!.text,
                                         style: const TextStyle(fontSize: 16),
@@ -972,31 +995,45 @@ If no section is specified, assume all sections.
                                       const SizedBox(height: 24),
                                       _buildAttachmentsList(),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
                                         children: [
                                           TextButton(
                                             onPressed: _resetState,
                                             style: TextButton.styleFrom(
-                                              foregroundColor: Colors.red.shade400,
-                                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                              foregroundColor:
+                                                  Colors.red.shade400,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 20,
+                                                      vertical: 10),
                                             ),
                                             child: const Text('Reject'),
                                           ),
                                           const SizedBox(width: 16),
                                           ElevatedButton(
-                                            onPressed: _isLoading ? null : _sendEmail,
+                                            onPressed:
+                                                _isLoading ? null : _sendEmail,
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.green.shade400,
-                                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                              backgroundColor:
+                                                  Colors.green.shade400,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 30,
+                                                      vertical: 15),
                                               shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(15),
+                                                borderRadius:
+                                                    BorderRadius.circular(15),
                                               ),
                                             ),
                                             child: _isLoading
                                                 ? const SizedBox(
                                                     width: 20,
                                                     height: 20,
-                                                    child: CircularProgressIndicator(color: Colors.white),
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                            color:
+                                                                Colors.white),
                                                   )
                                                 : const Text('Send Email'),
                                           ),
@@ -1016,7 +1053,7 @@ If no section is specified, assume all sections.
             ),
           ),
           Positioned(
-            right: 60,  // Increased from 40
+            right: 60, // Increased from 40
             bottom: 60, // Increased from 40
             child: FloatingActionButton.extended(
               onPressed: _showHistoryDialog,

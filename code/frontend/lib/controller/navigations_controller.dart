@@ -44,7 +44,7 @@ class NavigationControllerImp extends NavigationController {
         _currentPage = TeachersWithTrailing(teacherModel: info?["model"]);
       case NavigationEnum.EmailSender:
         _currentPage = ChatBot();
-      case NavigationEnum.Apsence:
+      case NavigationEnum.Absence:
         _currentPage = const AbsencePage();
     }
 
