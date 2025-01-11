@@ -259,14 +259,14 @@ class _ChatBotState extends State<ChatBot> {
 
       Recipients: Teachers, Students, Parents or Both.
 
-      Student Levels: L1, L2, L3, or All levels (if applicable).
+      Student Grades: Grade 1, Grade 2, Grade 3, or All Grades (if applicable).
       Avoid asking follow-up questions unless key details are ambiguous.
 
       Information Extraction
 
       Directly deduce the relevant details from the provided text:
 
-      Recipients: Clearly categorize them (e.g., "Teachers," "Students - L1," "Students - All levels").
+      Recipients: Clearly categorize them (e.g., "Teachers," "Students - Grade 1," "Students - All Grades").
       Purpose: Generate a clear, concise description of the email's intent.
       Example input:
 
