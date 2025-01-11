@@ -35,12 +35,14 @@ class _AbsencePageState extends State<AbsencePage> {
   Future<void> _initializeDefaultVideo() async {
     try {
       if (Platform.isWindows) {
-        final String videoPath = 'C:/Users/ANAS/Desktop/DevImpact-Hackathon/code/frontend/assets/vidio/AI_camera.mp4';
+        final String videoPath =
+            'C:/Users/ANAS/Desktop/DevImpact-Hackathon/code/frontend/assets/vidio/AI_camera.mp4';
         _videoController = VideoPlayerController.file(File(videoPath));
       } else {
-        _videoController = VideoPlayerController.asset('assets/vidio/AI_camera.mp4');
+        _videoController =
+            VideoPlayerController.asset('assets/vidio/AI_camera.mp4');
       }
-      
+
       await _videoController!.initialize();
       _videoController!.setLooping(true);
       setState(() {});
@@ -150,7 +152,9 @@ class _AbsencePageState extends State<AbsencePage> {
                 });
               },
               child: Icon(
-                _videoController!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                _videoController!.value.isPlaying
+                    ? Icons.pause
+                    : Icons.play_arrow,
               ),
             ),
           ),
@@ -198,7 +202,8 @@ class _AbsencePageState extends State<AbsencePage> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(25),
-                            border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
+                            border: Border.all(
+                                color: Colors.blue.withOpacity(0.3), width: 2),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.blue.withOpacity(0.1),
@@ -262,9 +267,9 @@ class _AbsencePageState extends State<AbsencePage> {
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(width: 40),
-                        
+
                         // Video Square
                         Container(
                           width: 400,
@@ -273,7 +278,8 @@ class _AbsencePageState extends State<AbsencePage> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(25),
-                            border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
+                            border: Border.all(
+                                color: Colors.blue.withOpacity(0.3), width: 2),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.blue.withOpacity(0.1),
@@ -293,7 +299,8 @@ class _AbsencePageState extends State<AbsencePage> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   if (_videoController == null ||
-                                      !_videoController!.value.isInitialized) ...[
+                                      !_videoController!
+                                          .value.isInitialized) ...[
                                     Container(
                                       padding: const EdgeInsets.all(20),
                                       decoration: BoxDecoration(
@@ -326,16 +333,19 @@ class _AbsencePageState extends State<AbsencePage> {
                                             SizedBox(
                                               width: 396,
                                               height: 396,
-                                              child: VideoPlayer(_videoController!),
+                                              child: VideoPlayer(
+                                                  _videoController!),
                                             ),
                                             Container(
                                               padding: const EdgeInsets.all(15),
                                               decoration: BoxDecoration(
-                                                color: Colors.black.withOpacity(0.5),
+                                                color: Colors.black
+                                                    .withOpacity(0.5),
                                                 shape: BoxShape.circle,
                                               ),
                                               child: Icon(
-                                                _videoController!.value.isPlaying
+                                                _videoController!
+                                                        .value.isPlaying
                                                     ? Icons.pause
                                                     : Icons.play_arrow,
                                                 color: Colors.white,
