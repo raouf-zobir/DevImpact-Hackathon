@@ -37,7 +37,7 @@ List<DrawerItemModel> drawerItem = [
       title: 'Users',
       icon: Assets.iconsUser,
       destination: NavigationEnum.Users),
-      DrawerItemModel(
+  DrawerItemModel(
       title: 'Email Sender',
       icon: Assets.iconsEmail,
       destination: NavigationEnum.EmailSender),

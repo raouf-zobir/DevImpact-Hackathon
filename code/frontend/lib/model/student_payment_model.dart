@@ -9,11 +9,11 @@ class StudentPaymentModel {
 
 List<StudentPaymentModel> studentsPaymentModel = [
   StudentPaymentModel(
-      "#10125", "2 March 2021, 13:45 PM", r"$ 200,000 DZ", "Complete"),
+      "#10125", "2 March 2022, 13:45 PM", r"$ 200,000 DZ", "Complete"),
   StudentPaymentModel(
-      "#10138", "15 March 2022, 11:05 PM", r"$ 200,000 DZ", "   Pending "),
+      "#10138", "15 March 2023, 11:05 PM", r"$ 200,000 DZ", "   Pending "),
   StudentPaymentModel(
-      "#10142", "01 Avril 2022, 12:37 PM", r"$ 200,000 DZ", "Canceled"),
+      "#10142", "01 Avril 2023, 12:37 PM", r"$ 200,000 DZ", "Canceled"),
   StudentPaymentModel(
-      "#10180", "01 Avril 2022, 14:25 PM", r"$ 200,000 DZ", "Complete"),
+      "#10180", "01 Avril 2023, 14:25 PM", r"$ 200,000 DZ", "Complete"),
 ];

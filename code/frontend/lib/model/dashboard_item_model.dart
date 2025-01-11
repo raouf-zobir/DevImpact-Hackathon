@@ -18,25 +18,25 @@ class DashboardItemModel {
 List<DashboardItemModel> dashboardItemsModel = [
   DashboardItemModel(
     text: "Students",
-    number: 932,
+    number: 116,
     icon: Assets.iconsStudent,
     color: AppColors.primaryPurple,
   ),
   DashboardItemModel(
     text: "Teachers",
-    number: 754,
+    number: 32,
     icon: Assets.iconsTeacher,
     color: AppColors.accentOrange,
   ),
   DashboardItemModel(
     text: "Events",
-    number: 40,
+    number: 18,
     icon: Assets.iconsCalendar,
     color: AppColors.highlightYellow,
   ),
   DashboardItemModel(
     text: "Students",
-    number: 32,
+    number: 84,
     icon: Assets.iconsFood,
     color: AppColors.textBlack,
   ),

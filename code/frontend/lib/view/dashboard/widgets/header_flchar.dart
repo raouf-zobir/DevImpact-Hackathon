@@ -24,13 +24,13 @@ class HeaderFlChar extends StatelessWidget {
           children: [
             ItemInsideHeaderFlchar(
               colorCircle: AppColors.highlightYellow,
-              number: 1.245,
+              number: 245,
               text: "This Week",
             ),
             SizedBox(width: 16),
             ItemInsideHeaderFlchar(
               colorCircle: AppColors.errorRed,
-              number: 1.356,
+              number: 356,
               text: "Last Week",
             ),
           ],
