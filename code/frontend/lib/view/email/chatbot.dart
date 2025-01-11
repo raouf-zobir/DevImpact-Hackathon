@@ -57,10 +57,10 @@ class EmailService {
     }
   }
 
-  Future<List<String>> getEmailAddresses(String recipientType, {String? level}) async {
+  Future<List<String>> getEmailAddresses(String recipientType, {List<String>? levels}) async {
     final normalizedRecipientType = recipientType.replaceAll(' ', '').toLowerCase();
     final List<String> emailList = [];
-    final normalizedLevel = _normalizeGrade(level);
+    final normalizedLevels = levels?.map((level) => _normalizeGrade(level)).toList();
 
     // Load appropriate CSV data based on recipient type
     if (normalizedRecipientType.contains('teachers')) {
@@ -88,10 +88,10 @@ class EmailService {
       for (var row in _cachedData['students']!) {
         if (row.length <= emailIndex || row[0] == "ID") continue;
 
-        // Check grade if level is specified
-        if (normalizedLevel != null) {
+        // Check grade if levels are specified
+        if (normalizedLevels != null && normalizedLevels.isNotEmpty) {
           String studentGrade = _normalizeGrade(row[gradeIndex]?.toString()) ?? '';
-          if (studentGrade != normalizedLevel) continue;
+          if (!normalizedLevels.contains(studentGrade)) continue;
         }
 
         String? studentEmail = row[emailIndex]?.toString().trim();
@@ -115,7 +115,7 @@ class EmailService {
 
   Future<void> sendEmail({
     required List<String> recipientTypes,
-    String? level,
+    List<String>? levels,
     required String subject,
     required String body,
   }) async {
@@ -130,12 +130,12 @@ class EmailService {
     
     // Process each recipient type separately
     for (var recipientType in recipientTypes) {
-      final addresses = await getEmailAddresses(recipientType, level: level);
+      final addresses = await getEmailAddresses(recipientType, levels: levels);
       emailAddresses.addAll(addresses);
     }
 
     if (emailAddresses.isEmpty) {
-      throw Exception('No recipients found for types: $recipientTypes${level != null ? ' in grade $level' : ''}');
+      throw Exception('No recipients found for types: $recipientTypes${levels != null ? ' in grades $levels' : ''}');
     }
 
     print('Preparing to send email to ${emailAddresses.length} recipients');
@@ -160,7 +160,7 @@ class EmailService {
 
   static RecipientInfo parseRecipientString(String recipients) {
     final parts = recipients.toLowerCase().split(',').map((e) => e.trim()).toList();
-    String? level;
+    List<String> levels = [];
     List<String> types = [];
 
     // First pass: extract grade information
@@ -170,7 +170,7 @@ class EmailService {
         final gradeMatch = RegExp(r'grade\s*(\d+)|g(\d+)').firstMatch(part);
         if (gradeMatch != null) {
           final gradeNum = gradeMatch.group(1) ?? gradeMatch.group(2);
-          level = 'grade$gradeNum';
+          levels.add('grade$gradeNum');
         }
       }
     }
@@ -196,15 +196,15 @@ class EmailService {
       types.add('students'); // Default to 'students' if no specific type is found
     }
 
-    return RecipientInfo(types: types.toSet().toList(), level: level);
+    return RecipientInfo(types: types.toSet().toList(), levels: levels);
   }
 }
 
 class RecipientInfo {
   final List<String> types;
-  final String? level;
+  final List<String> levels;
 
-  RecipientInfo({required this.types, this.level});
+  RecipientInfo({required this.types, required this.levels});
 }
 
 class EmailData {
@@ -439,7 +439,7 @@ class _ChatBotState extends State<ChatBot> {
       
       await _emailService.sendEmail(
         recipientTypes: recipientInfo.types,
-        level: recipientInfo.level,
+        levels: recipientInfo.levels,
         subject: _emailData!.title,
         body: _emailData!.text,
       );
