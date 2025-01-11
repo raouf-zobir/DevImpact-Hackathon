@@ -9,6 +9,8 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+import 'package:path/path.dart' as path;
+import 'package:file_picker/file_picker.dart';
 
 class EmailService {
   static const String _smtpHost = 'smtp.gmail.com';
@@ -127,6 +129,7 @@ class EmailService {
     List<String>? sections,
     required String subject,
     required String body,
+    List<File>? attachments, // New parameter for attachments
   }) async {
     final smtpServer = SmtpServer(
       _smtpHost,
@@ -156,6 +159,26 @@ class EmailService {
 
     print('Preparing to send email to ${emailAddresses.length} recipients');
 
+    // Process attachments
+    List<Attachment>? emailAttachments;
+    if (attachments != null && attachments.isNotEmpty) {
+      emailAttachments = [];
+      for (var file in attachments) {
+        if (await file.exists()) {
+          final fileName = path.basename(file.path);
+          emailAttachments.add(
+            FileAttachment(
+              file,
+              fileName: fileName,
+              contentType: _getContentType(fileName),
+            ),
+          );
+        } else {
+          print('Warning: Attachment not found: ${file.path}');
+        }
+      }
+    }
+
     for (var email in emailAddresses) {
       final message = Message()
         ..from = Address(_username)
@@ -163,15 +186,45 @@ class EmailService {
         ..subject = subject
         ..text = body;
 
+      // Add attachments to the message
+      if (emailAttachments != null) {
+        message.attachments.addAll(emailAttachments);
+      }
+
       try {
         await send(message, smtpServer);
         print('Email sent successfully to $email');
       } catch (e) {
         print('Failed to send email to $email: $e');
+        throw Exception('Failed to send email: $e');
       }
     }
 
     print('All emails have been sent.');
+  }
+
+  // Helper method to determine content type based on file extension
+  String _getContentType(String fileName) {
+    final ext = path.extension(fileName).toLowerCase();
+    switch (ext) {
+      case '.pdf':
+        return 'application/pdf';
+      case '.doc':
+      case '.docx':
+        return 'application/msword';
+      case '.xls':
+      case '.xlsx':
+        return 'application/vnd.ms-excel';
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      case '.txt':
+        return 'text/plain';
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   static RecipientInfo parseRecipientString(String recipients) {
@@ -348,11 +401,72 @@ class _ChatBotState extends State<ChatBot> {
   final GeminiAPIService _geminiAPIService =
       GeminiAPIService(apiKey: ApiConstants.apiKey);
 
+  final List<File> _selectedFiles = []; // Add a list to store selected files
+
+  Future<void> _pickFiles() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.any,
+      );
+
+      if (result != null) {
+        setState(() {
+          _selectedFiles.addAll(
+            result.paths.map((path) => File(path!)).toList(),
+          );
+        });
+      }
+    } catch (e) {
+      print('Error picking files: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to pick files: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Widget _buildAttachmentsList() {
+    if (_selectedFiles.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Attachments:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _selectedFiles.map((file) {
+              return Chip(
+                label: Text(path.basename(file.path)),
+                onDeleted: () {
+                  setState(() {
+                    _selectedFiles.remove(file);
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _resetState() {
     setState(() {
       _inputController.clear();
       _emailData = null;
       _showEmailPreview = false;
+      _selectedFiles.clear(); // Clear selected files
     });
   }
 
@@ -465,6 +579,7 @@ If no section is specified, assume all sections.
         sections: recipientInfo.sections,
         subject: _emailData!.title,
         body: _emailData!.text,
+        attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
       );
       
       // Update the last history entry with success status
@@ -792,6 +907,24 @@ If no section is specified, assume all sections.
                                             style: TextStyle(fontSize: 16),
                                           ),
                                   ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _isLoading ? null : _pickFiles,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue.shade400,
+                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                    ),
+                                    child: _isLoading
+                                        ? const CircularProgressIndicator(color: Colors.white)
+                                        : const Text(
+                                            'Add Attachments',
+                                            style: TextStyle(fontSize: 16),
+                                          ),
+                                  ),
+                                  _buildAttachmentsList(),
                                 ],
                               ),
                             ),
@@ -837,6 +970,7 @@ If no section is specified, assume all sections.
                                         style: const TextStyle(fontSize: 16),
                                       ),
                                       const SizedBox(height: 24),
+                                      _buildAttachmentsList(),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.end,
                                         children: [
