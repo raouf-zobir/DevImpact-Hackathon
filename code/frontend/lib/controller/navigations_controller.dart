@@ -11,6 +11,8 @@ import 'package:sama/view/users_details/users_with_trailing.dart';
 import 'package:sama/view/view_all_student/view_all_student.dart';
 import 'package:sama/view/view_all_teacher/view_all_teacher.dart';
 import 'package:sama/view/email/chatbot.dart';
+import 'package:sama/view/apsence/apsence_page.dart'; // Add this import
+
 abstract class NavigationController extends GetxController {
   Widget getCurrentPage();
 }
@@ -42,6 +44,8 @@ class NavigationControllerImp extends NavigationController {
         _currentPage = TeachersWithTrailing(teacherModel: info?["model"]);
       case NavigationEnum.EmailSender:
         _currentPage = ChatBot();
+      case NavigationEnum.Apsence:
+        _currentPage = const AbsencePage();
     }
 
     update();
