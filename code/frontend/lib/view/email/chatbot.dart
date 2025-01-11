@@ -760,288 +760,350 @@ If no section is specified, assume all sections.
     );
   }
 
-  Widget _buildEmailPreview() {
-    if (_emailData == null) return const SizedBox.shrink();
-
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _emailData!.title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'To: ${_emailData!.recipients}',
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-            const Divider(height: 24),
-            Text(
-              _emailData!.text,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: _resetState,
-                  child: const Text('Reject'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _sendEmail,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(color: Colors.white),
-                        )
-                      : const Text('Send Email'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
+  
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue.shade50,
+            Colors.white,
+            Colors.purple.shade50,
           ],
         ),
       ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
+      child: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(40),
-            child: Column(
-              children: [
-                const HeaderWithSearch(
-                  title: "Email Assistant",
-                  showSearch: false,
-                ),
-                const SizedBox(height: 28),
-                Expanded(
-                  child: Container(
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                children: [
+                  // Modern header with glassmorphism effect
+                  Container(
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.blue.shade50,
-                          Colors.white,
-                          Colors.white,
+                      color: Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.mail_outline, 
+                          size: 32, 
+                          color: Colors.blue.shade700
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          "Email Assistant",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.1),
+                            spreadRadius: 0,
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                          ),
                         ],
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (!_showEmailPreview)
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(25),
-                                border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.blue.withOpacity(0.1),
-                                    spreadRadius: 5,
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                children: [
-                                  TextField(
-                                    controller: _inputController,
-                                    decoration: InputDecoration(
-                                      labelText: 'Enter your request',
-                                      labelStyle: TextStyle(color: Colors.blue.shade400),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.blue.shade400),
-                                      ),
-                                      hintText: 'e.g., Notify all students about school closure tomorrow due to a water leak',
-                                    ),
-                                    maxLines: 3,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: _isLoading ? null : _sendMessage,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue.shade400,
-                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                    ),
-                                    child: _isLoading
-                                        ? const CircularProgressIndicator(color: Colors.white)
-                                        : const Text(
-                                            'Generate Email',
-                                            style: TextStyle(fontSize: 16),
-                                          ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: _isLoading ? null : _pickFiles,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue.shade400,
-                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                    ),
-                                    child: _isLoading
-                                        ? const CircularProgressIndicator(color: Colors.white)
-                                        : const Text(
-                                            'Add Attachments',
-                                            style: TextStyle(fontSize: 16),
-                                          ),
-                                  ),
-                                  _buildAttachmentsList(),
-                                ],
-                              ),
-                            ),
-                          if (_showEmailPreview)
-                            Expanded(
-                              child: SingleChildScrollView(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(25),
-                                    border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.blue.withOpacity(0.1),
-                                        spreadRadius: 5,
-                                        blurRadius: 15,
-                                        offset: const Offset(0, 5),
-                                      ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.all(20),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (!_showEmailPreview)
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        _emailData!.title,
-                                        style: const TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
+                                      TextField(
+                                        controller: _inputController,
+                                        decoration: InputDecoration(
+                                          labelText: 'What would you like to write?',
+                                          labelStyle: TextStyle(
+                                            color: Colors.blue.shade700,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                            borderSide: BorderSide(
+                                              color: Colors.blue.shade100,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                            borderSide: BorderSide(
+                                              color: Colors.blue.shade400,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          filled: true,
+                                          fillColor: Colors.blue.shade50.withOpacity(0.3),
+                                          hintText: 'e.g., Draft a professional email about...',
+                                          prefixIcon: Icon(
+                                            Icons.edit_note,
+                                            color: Colors.blue.shade400,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'To: ${_emailData!.recipients}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.blue.shade400,
-                                        ),
-                                      ),
-                                      Divider(color: Colors.blue.shade100, height: 24),
-                                      Text(
-                                        _emailData!.text,
+                                        maxLines: 4,
                                         style: const TextStyle(fontSize: 16),
                                       ),
                                       const SizedBox(height: 24),
-                                      _buildAttachmentsList(),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
                                         children: [
-                                          TextButton(
-                                            onPressed: _resetState,
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: Colors.red.shade400,
-                                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                            ),
-                                            child: const Text('Reject'),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          ElevatedButton(
-                                            onPressed: _isLoading ? null : _sendEmail,
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.green.shade400,
-                                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(15),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: _isLoading ? null : _pickFiles,
+                                              icon: const Icon(Icons.attach_file),
+                                              label: const Text('Attachments'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.grey.shade100,
+                                                foregroundColor: Colors.grey.shade700,
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(15),
+                                                ),
+                                                elevation: 0,
                                               ),
                                             ),
-                                            child: _isLoading
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: _isLoading ? null : _sendMessage,
+                                              icon: _isLoading 
                                                 ? const SizedBox(
                                                     width: 20,
                                                     height: 20,
-                                                    child: CircularProgressIndicator(color: Colors.white),
+                                                    child: CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2,
+                                                    ),
                                                   )
-                                                : const Text('Send Email'),
+                                                : const Icon(Icons.send),
+                                              label: Text(_isLoading ? 'Generating...' : 'Generate'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.blue.shade600,
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(15),
+                                                ),
+                                                elevation: 0,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
+                                      if (_selectedFiles.isNotEmpty) ...[
+                                        const SizedBox(height: 24),
+                                        _buildAttachmentsList(),
+                                      ],
                                     ],
                                   ),
                                 ),
-                              ),
-                            ),
-                        ],
+                              if (_showEmailPreview)
+                                _buildEmailPreview(),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
+          // History Button with animation
           Positioned(
-            right: 60,  // Increased from 40
-            bottom: 60, // Increased from 40
-            child: FloatingActionButton.extended(
-              onPressed: _showHistoryDialog,
-              backgroundColor: Colors.blue.shade700,
-              icon: const Icon(
-                Icons.history,
-                color: Colors.white,
-                size: 32,
-              ),
-              label: const Text(
-                'History',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+            right: 24,
+            bottom: 24,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              child: FloatingActionButton.extended(
+                onPressed: _showHistoryDialog,
+                backgroundColor: Colors.blue.shade700,
+                elevation: 4,
+                icon: const Icon(Icons.history, color: Colors.white),
+                label: const Row(
+                  children: [
+                    SizedBox(width: 4),
+                    Text(
+                      'History',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              elevation: 4,
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
+Widget _buildEmailPreview() {
+  return Container(
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.blue.shade100),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.blue.withOpacity(0.05),
+          blurRadius: 10,
+          spreadRadius: 0,
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.mail, size: 28, color: Colors.blue.shade700),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _emailData!.title,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.people, size: 20, color: Colors.blue.shade700),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'To: ${_emailData!.recipients}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.blue.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            _emailData!.text,
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.6,
+            ),
+          ),
+        ),
+        if (_selectedFiles.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          _buildAttachmentsList(),
+        ],
+        const SizedBox(height: 32),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton.icon(
+              onPressed: _resetState,
+              icon: Icon(Icons.close, color: Colors.red.shade400),
+              label: Text(
+                'Discard',
+                style: TextStyle(
+                  color: Colors.red.shade400,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: _isLoading ? null : _sendEmail,
+              icon: _isLoading 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.send),
+              label: Text(_isLoading ? 'Sending...' : 'Send Email'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade500,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
   @override
   void dispose() {
     _inputController.dispose();
